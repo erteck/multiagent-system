@@ -6,13 +6,15 @@ from collections import deque
 import random
 
 class AgentCar(Agent):
-    def __init__(self, unique_id, model, origen, orientation):
+    def __init__(self, unique_id, model, origen, orientation, trafficLight,color="black"):
         super().__init__(unique_id, model)
         self.previous = "Normal"
         self.curr = "Normal"
         self.origin = origen
         self.orientation = orientation
+        self.trafficLight = trafficLight
         self.destination = self.setDestination(model)
+        self.color = color
 
     # Escoger de manera aleatoria un destino para el auto, exluyendo aquel que
     # Involucra una vuelta en U    
@@ -47,9 +49,19 @@ class AgentCar(Agent):
         
         for a in listAgents:
             if isinstance(a, AgentCar):
+                listAgents = self.model.grid.get_cell_list_contents(self.pos)
+                for a in listAgents:
+                    if isinstance(a, AgentCell):
+                        self.previous = self.curr
+                        self.curr = a.typeCell
                 return
         
         self.moveCar(nextPos)
+        listAgents = self.model.grid.get_cell_list_contents(self.pos)
+        for a in listAgents:
+            if isinstance(a, AgentCell):
+                self.previous = self.curr
+                self.curr = a.typeCell
     
     def getNextPos(self):
         if(self.orientation == "Arriba"):
@@ -69,7 +81,7 @@ class AgentCar(Agent):
             position[0] += 1
             return tuple(position)
 
-    def notifytrafficLight(self):
+    def notifyTrafficLight(self):
         # Encontrar el semáforo
         listAgents = self.model.grid.get_cell_list_contents(self.pos)
 
@@ -100,25 +112,20 @@ class AgentCar(Agent):
             return
 
         if(self.pos == self.destination):
-                    self.model.grid.remove_agent(self)
-                    self.model.schedule.remove(self)
-                    return
-
-        if  not(self.previous == "Semaforo" and self.curr == "Semaforo"):
+            self.model.grid.remove_agent(self)
+            self.model.schedule.remove(self)
+            return
+        
+        # Evita que el auto se pueda mover dos veces en el mismo step
+        if not(self.previous == "Semaforo" and self.curr == "Semaforo"):
             self.checkMove()
         
-        listAgents = self.model.grid.get_cell_list_contents(self.pos)
-        for a in listAgents:
-            if isinstance(a, AgentCell):
-                self.previous = self.curr
-                self.curr = a.typeCell
-
         
         # Arq 1. Si tengo coche adelante, no avanzo (implícito)
         # Arq 2. Si estoy un una celda de aviso y mi prev es una normal 
         # Comunicarme con semáforo
         if(self.previous == "Normal" and self.curr == "Aviso"):
-            self.notifytrafficLight()
+            self.notifyTrafficLight()
             #return
             
         # Arq 3. Si estoy en una celda de semáforo y mi prev es una de aviso
@@ -127,8 +134,12 @@ class AgentCar(Agent):
             self.previous = self.curr
             self.curr = "Semaforo"
             #return
-        # Si estoy en una celda de semáforo y mi prev es una celda de semáforo
         
+        elif(self.previous == "Aviso" and self.curr == "Aviso"):
+            if(self.trafficLight.unique_id not in AgentTrafficLight.turns):
+                AgentTrafficLight.turns.append(self.trafficLight.unique_id)
+
+        # Si estoy en una celda de semáforo y mi prev es una celda de semáforo
         elif(self.previous == "Semaforo" and self.curr == "Semaforo"):
             tl = self.findTrafficLight()
             # Arq 4. Si es verde el sem, intento avanzar
@@ -141,11 +152,14 @@ class AgentCar(Agent):
 
         # Arq 6. Si estoy en una celda de intersección y mi prev es una celda de semáforo
         # Llamar a move y res tar a cars de semáforo
-        elif(self.curr == "Interseccion" and self.previous == "Semaforo"):
-            tl = self.findTrafficLight()
-            tl.carCount -= 1
+        #elif(self.curr == "Interseccion" and self.previous == "Semaforo"):
+            # tl = self.findTrafficLight()
+            # tl.carCount -= 1
+            #return
             
-            
+        # Si estoy en una celda normal y salí de la celda de intersección, le restamos al carCount
+        elif(self.curr == "Normal" and self.previous == "Interseccion"):
+            self.trafficLight.carCount -= 1
         # Arq 7. Si estoy en una celda de intersección y mi prev es una celda de intersección
         # moverme (implícito)
 
@@ -186,50 +200,45 @@ class AgentTrafficLight(Agent):
         self.carCount = 0
         self.color = "Amarillo"
         self.isMyTurn = False
-        self.timeGreen = 30
+        self.timeGreen = 10
     
 
     def carArrived(self):
         if(self.carCount == 0):
-            if self.isMyTurn:
-                return
-            else:
-                AgentTrafficLight.turns.append(self.unique_id)
-                # for i in range(0,4):
-                # 
+            if not self.isMyTurn:
+                if self.unique_id not in AgentTrafficLight.turns:
+                    AgentTrafficLight.turns.append(self.unique_id)
 
     def stepTrafficLight(self):
         # print("Step Semaforo")
         if AgentTrafficLight.turns:
             self.isMyTurn = AgentTrafficLight.turns[0] == self.unique_id
-
+        else:
+            self.isMyTurn = False
         print(f'Semáforo {self.unique_id}: {self.color}, is my turn: {self.isMyTurn}')
 
-        # Arq 1, si no hay autos en ningún semáforo, amarillo
-        if not AgentTrafficLight.turns:
-            self.color = "Amarillo"
-            
+        
         # Arq. 2. Si no es mi turno, llega un coche y el contador de coches < 1, pide turno
         #Implementado en método carArrived
         
         # Arq 5.Si mi tiempo de turno acaba de terminar y mi contador de coches es mayor a 0
-        elif self.timeGreen == 0 and self.carCount > 0:
+        if self.isMyTurn and self.timeGreen == 0 and self.carCount > 0:
             self.color = "Rojo"
             AgentTrafficLight.turns.popleft()
             AgentTrafficLight.turns.append(self.unique_id)
-            self.timeGreen = 30
+            self.timeGreen = 10
 
         # Arq 6. Si mi tiempo de turno acaba de terminar y mi contador de coches igual 0
-        elif self.timeGreen == 0 and self.carCount == 0:
+        elif self.isMyTurn and self.timeGreen == 0 and self.carCount <= 0:
             self.color = "Rojo"
             AgentTrafficLight.turns.popleft()
-            self.timeGreen = 30
+            self.timeGreen = 10
 
 
         # Arq 7, si es mi turno y ya no hay autos, cambiar a rojo y quitar mi turno
         elif self.isMyTurn and self.carCount == 0:
             self.color = "Rojo"
-            self.timeGreen = 30
+            self.timeGreen = 10
             AgentTrafficLight.turns.popleft()
 
         # Arq 4, si es mi turno, cambiar a verde
@@ -237,10 +246,14 @@ class AgentTrafficLight(Agent):
             self.color = "Verde"
             self.timeGreen -= 1
 
+        # Arq 1, si no hay autos en ningún semáforo, amarillo
+        elif not AgentTrafficLight.turns:
+            self.color = "Amarillo"
+
         # Arq. 3 Si no es mi turno y en algún otro semáforo hay autos debo permanecer en rojo
         elif not self.isMyTurn:
             self.color = "Rojo"
-
+        
         print(AgentTrafficLight.turns)
         print(f'Car count {self.carCount}, green: {self.timeGreen}')
     
@@ -265,6 +278,12 @@ class ModelStreet(Model):
         self.possibleDestinations = [(10,0),(21,10),(11,21),(0,11)]
         self.schedule = RandomActivation(self)
         self.running = True
+        
+        # Semáforos
+        self.tl1 = None
+        self.tl2 = None
+        self.tl3 = None
+        self.tl4 = None
         
         
         # Construir paredes
@@ -296,13 +315,21 @@ class ModelStreet(Model):
         # Coordenadas de celdas de semáforo (9,10) (10,12) (11,9) (12,11)
         # Colocar celdas de semáforo y sus respectivos semáforos
         tl1 = AgentTrafficLight(self.uniqueIDs,self)
+        self.grid.place_agent(tl1, (8,8))
         self.uniqueIDs += 1
         tl2 = AgentTrafficLight(self.uniqueIDs,self)
         self.uniqueIDs += 1
+        self.grid.place_agent(tl2, (8,13))
         tl3 = AgentTrafficLight(self.uniqueIDs,self)
+        self.grid.place_agent(tl3, (13,8))
         self.uniqueIDs += 1
         tl4 = AgentTrafficLight(self.uniqueIDs,self)
+        self.grid.place_agent(tl4, (13,13))
         self.uniqueIDs += 1
+        self.tl1 = tl1
+        self.tl2 = tl2
+        self.tl3 = tl3
+        self.tl4 = tl4
        
         cellS1 = AgentCell(self.uniqueIDs, self, "Semaforo", tl1)
         self.uniqueIDs += 1
@@ -380,14 +407,36 @@ class ModelStreet(Model):
         self.uniqueIDs += 1
         cellN4 = AgentCell(self.uniqueIDs, self, "Normal")
         self.uniqueIDs += 1
+        cellN5 = AgentCell(self.uniqueIDs, self, "Normal")
+        self.uniqueIDs += 1
+        cellN6 = AgentCell(self.uniqueIDs, self, "Normal")
+        self.uniqueIDs += 1
+        cellN7 = AgentCell(self.uniqueIDs, self, "Normal")
+        self.uniqueIDs += 1
+        cellN8 = AgentCell(self.uniqueIDs, self, "Normal")
+        self.uniqueIDs += 1
         self.schedule.add(cellN1)
         self.schedule.add(cellN2)
         self.schedule.add(cellN3)
         self.schedule.add(cellN4)
+        self.schedule.add(cellN5)
+        self.schedule.add(cellN6)
+        self.schedule.add(cellN7)
+        self.schedule.add(cellN8)
         self.grid.place_agent(cellN1, (9,11))
         self.grid.place_agent(cellN2, (10,9))
         self.grid.place_agent(cellN3, (12,10))
-        self.grid.place_agent(cellN4, (11,12))     
+        self.grid.place_agent(cellN4, (11,12))
+        self.grid.place_agent(cellN5, (8,11))
+        self.grid.place_agent(cellN6, (10,8))
+        self.grid.place_agent(cellN7, (13,10))
+        self.grid.place_agent(cellN8, (11,13))     
+
+
+    # Si el coche parte de (0,10) -> tl1
+    # Si el coche parte de (11,0) -> tl3
+    # Si el coche parte de (21,11) -> tl4
+    # Si el coche parte de (10,21) -> tl2  
 
     def addAgents(self):
         """
@@ -396,36 +445,37 @@ class ModelStreet(Model):
         elegir de manera random entre True/False
         para decidir si agregar un nuevo agente
         """
-        boolList = [self.random.choice([True, False,False]), self.random.choice([True, False,False]), self.random.choice([True, False]), self.random.choice([True, False])]
-
-        if(boolList[0]):
+        #boolList = [self.random.choice([True, False,False,False,False]), self.random.choice([True, False,False,False,False]), self.random.choice([True, False,False,False,False]), self.random.choice([True, False,False,False,False])]
+        b1,b2,b3,b4 = random.choices(population=[True,False], weights=[0.1, 0.9],k=4)
+        
+        if(b1):
             cell = self.grid.get_cell_list_contents((11,0))
             if(not cell):
-                b = AgentCar(self.uniqueIDs, self, (11,0), "Arriba")
+                b = AgentCar(self.uniqueIDs, self, (11,0), "Arriba",self.tl3,"purple")
                 self.uniqueIDs += 1
                 self.schedule.add(b)
                 self.grid.place_agent(b, (11,0))
         
-        if(boolList[1]):
+        if(b2):
             cell = self.grid.get_cell_list_contents((21,11))
             if(not cell):
-                b = AgentCar(self.uniqueIDs, self, (21,11), "Izquierda")
+                b = AgentCar(self.uniqueIDs, self, (21,11), "Izquierda",self.tl4)
                 self.uniqueIDs += 1
                 self.schedule.add(b)
                 self.grid.place_agent(b, (21,11))
 
-        if(boolList[2]):
+        if(b3):
             cell = self.grid.get_cell_list_contents((0,10))
             if(not cell):
-                b = AgentCar(self.uniqueIDs, self, (0,10), "Derecha")
+                b = AgentCar(self.uniqueIDs, self, (0,10), "Derecha",self.tl1,"brown")
                 self.uniqueIDs += 1
                 self.schedule.add(b)
                 self.grid.place_agent(b, (0,10))
         
-        if(boolList[3]):
+        if(b4):
             cell = self.grid.get_cell_list_contents((10,21))
             if(not cell):
-                b = AgentCar(self.uniqueIDs, self, (10,21), "Abajo")
+                b = AgentCar(self.uniqueIDs, self, (10,21), "Abajo", self.tl2,"orange")
                 self.uniqueIDs += 1
                 self.schedule.add(b)
                 self.grid.place_agent(b, (10,21))

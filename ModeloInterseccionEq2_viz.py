@@ -6,9 +6,9 @@ def agent_portrayal(agent):
     portrayal = {"Shape": "circle",
                  "Filled": "true",
                  "Layer": 1,
-                 "Color": "red",
+                 "Color": "white",
                  "r": 0.5}
-                 
+    '''            
     if (isinstance(agent, AgentCell)):
         if (agent.typeCell == "Aviso"):
             portrayal["Color"] = "#6A5ACD" # purple
@@ -25,17 +25,27 @@ def agent_portrayal(agent):
         elif (agent.typeCell == "Normal"):
             portrayal["Color"] = "yellow" 
             portrayal["Layer"] = 1
-            portrayal["r"] = 0.5
+            portrayal["r"] = 0.5'''
 
     if (isinstance(agent, AgentObstacle)):
         portrayal["Color"] = "#191970" # blue HTML
         portrayal["Layer"] = 1
-        portrayal["r"] = 1
+        portrayal["r"] = 0.1
         
     if (isinstance(agent,AgentCar)):
-        portrayal["Color"] = "black"
+        portrayal["Color"] = agent.color
         portrayal["Layer"] = 10
-        portrayal["r"] = 0.4      
+        portrayal["r"] = 0.4    
+        
+    if(isinstance(agent,AgentTrafficLight)):
+        if agent.color == "Amarillo":
+            portrayal["Color"] = "yellow"
+        elif agent.color == "Rojo":
+            portrayal["Color"] = "red"
+        elif agent.color == "Verde":
+            portrayal["Color"] = "green"
+        portrayal["Layer"] = 10
+        portrayal["r"] = 0.4
     return portrayal
 
 grid = CanvasGrid(agent_portrayal, 22, 22, 880, 880)
