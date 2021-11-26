@@ -52,7 +52,7 @@ grid = CanvasGrid(agent_portrayal, 22, 22, 880, 880)
 server = ModularServer(ModelStreet,
                        [grid],
                        "ModelStreet",
-                       {"nCars":3, "width":22, "length":22})
+                       {"width":22, "length":22})
 server.port = 8521 # The default
 server.launch()
 

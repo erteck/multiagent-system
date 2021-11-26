@@ -215,7 +215,7 @@ class AgentTrafficLight(Agent):
             self.isMyTurn = AgentTrafficLight.turns[0] == self.unique_id
         else:
             self.isMyTurn = False
-        print(f'Semáforo {self.unique_id}: {self.color}, is my turn: {self.isMyTurn}')
+        # print(f'Semáforo {self.unique_id}: {self.color}, is my turn: {self.isMyTurn}')
 
         
         # Arq. 2. Si no es mi turno, llega un coche y el contador de coches < 1, pide turno
@@ -254,8 +254,8 @@ class AgentTrafficLight(Agent):
         elif not self.isMyTurn:
             self.color = "Rojo"
         
-        print(AgentTrafficLight.turns)
-        print(f'Car count {self.carCount}, green: {self.timeGreen}')
+        # print(AgentTrafficLight.turns)
+        # print(f'Car count {self.carCount}, green: {self.timeGreen}')
     
     def step(self):
         pass
@@ -264,9 +264,8 @@ class AgentTrafficLight(Agent):
 
 
 class ModelStreet(Model):
-    def __init__(self,nCars, width, length): # Matriz de 22 x 22    
-        # Número de Autos
-        self.numCars = nCars
+    def __init__(self, width, length): # Matriz de 22 x 22    
+        # Ids
         self.uniqueIDs = 1
         # Número de Semáforos
         self.numTrafficLights = 4
@@ -481,7 +480,20 @@ class ModelStreet(Model):
                 self.grid.place_agent(b, (10,21))
 
     def step(self):
+        # Steps de agentes coche
         self.schedule.step()
+        # Steps de agentes semáforos
         for lights in range(len(self.trafficLights)):
             self.trafficLights[lights].stepTrafficLight()
         self.addAgents()
+        
+        # Se mandan las visualizaciones
+        positions = []
+        for i in range(4):
+            positions.append(self.trafficLights[i].color)
+        
+        for pos in range(100,len(self.schedule.agents)):
+            xy = self.schedule.agents[pos].pos
+            p = [xy[0],xy[1],0]
+            positions.append(p)
+        return positions
