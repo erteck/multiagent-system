@@ -19,9 +19,14 @@ def agent_portrayal(agent):
             portrayal["Layer"] = 1
             portrayal["r"] = 0.5
         elif (agent.typeCell == "Interseccion"):
-            portrayal["Color"] = "orange" # Navy
+            portrayal["Color"] = "orange" 
             portrayal["Layer"] = 1
             portrayal["r"] = 0.5
+        elif (agent.typeCell == "Normal"):
+            portrayal["Color"] = "yellow" 
+            portrayal["Layer"] = 1
+            portrayal["r"] = 0.5
+
     if (isinstance(agent, AgentObstacle)):
         portrayal["Color"] = "#191970" # blue HTML
         portrayal["Layer"] = 1
@@ -40,3 +45,4 @@ server = ModularServer(ModelStreet,
                        {"nCars":3, "width":22, "length":22})
 server.port = 8521 # The default
 server.launch()
+
