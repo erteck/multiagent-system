@@ -48,9 +48,6 @@ class AgentCar(Agent):
         for a in listAgents:
             if isinstance(a, AgentCar):
                 return
-            # if isinstance(a, AgentCell):
-            #     self.previous = self.curr
-            #     self.curr = a.typeCell
         
         self.moveCar(nextPos)
     
@@ -89,8 +86,19 @@ class AgentCar(Agent):
             if isinstance(a, AgentCell):
                 return a.trafficLight
     
-    def step(self):
+    def delete(self):
+        #(10,0),(21,10),(11,21),(0,11)
+        if self.pos in [(10,0),(21,10),(11,21),(0,11)]:
+            self.model.grid.remove_agent(self)
+            self.model.schedule.remove(self)
+            return True
         
+            
+    
+    def step(self):
+        if self.delete():
+            return
+
         if(self.pos == self.destination):
                     self.model.grid.remove_agent(self)
                     self.model.schedule.remove(self)
@@ -190,8 +198,8 @@ class AgentTrafficLight(Agent):
                 # for i in range(0,4):
                 # 
 
-    
-    def step(self):
+    def stepTrafficLight(self):
+        # print("Step Semaforo")
         if AgentTrafficLight.turns:
             self.isMyTurn = AgentTrafficLight.turns[0] == self.unique_id
 
@@ -203,15 +211,6 @@ class AgentTrafficLight(Agent):
             
         # Arq. 2. Si no es mi turno, llega un coche y el contador de coches < 1, pide turno
         #Implementado en método carArrived
-
-        # Arq 4, si es mi turno, cambiar a verde
-        elif self.isMyTurn:
-            self.color = "Verde"
-            self.timeGreen -= 1
-
-        # Arq. 3 Si no es mi turno y en algún otro semáforo hay autos debo permanecer en rojo
-        elif not self.isMyTurn:
-            self.color = "Rojo"
         
         # Arq 5.Si mi tiempo de turno acaba de terminar y mi contador de coches es mayor a 0
         elif self.timeGreen == 0 and self.carCount > 0:
@@ -233,7 +232,20 @@ class AgentTrafficLight(Agent):
             self.timeGreen = 30
             AgentTrafficLight.turns.popleft()
 
+        # Arq 4, si es mi turno, cambiar a verde
+        elif self.isMyTurn:
+            self.color = "Verde"
+            self.timeGreen -= 1
+
+        # Arq. 3 Si no es mi turno y en algún otro semáforo hay autos debo permanecer en rojo
+        elif not self.isMyTurn:
+            self.color = "Rojo"
+
         print(AgentTrafficLight.turns)
+        print(f'Car count {self.carCount}, green: {self.timeGreen}')
+    
+    def step(self):
+        pass
         
         
 
@@ -337,6 +349,7 @@ class ModelStreet(Model):
         self.grid.place_agent(cellA2, (11,8))
         self.grid.place_agent(cellA3, (13,11))
         self.grid.place_agent(cellA4, (10,13))
+        self.trafficLights = [tl1,tl2,tl3,tl4]
         
         # Coordenadas intersección (10,10) (11,10) (10,11) (11,11)
         # Colocar celdas de intersección
@@ -383,7 +396,7 @@ class ModelStreet(Model):
         elegir de manera random entre True/False
         para decidir si agregar un nuevo agente
         """
-        boolList = [self.random.choice([True, False]), self.random.choice([True, False]), self.random.choice([True, False]), self.random.choice([True, False])]
+        boolList = [self.random.choice([True, False,False]), self.random.choice([True, False,False]), self.random.choice([True, False]), self.random.choice([True, False])]
 
         if(boolList[0]):
             cell = self.grid.get_cell_list_contents((11,0))
@@ -393,30 +406,32 @@ class ModelStreet(Model):
                 self.schedule.add(b)
                 self.grid.place_agent(b, (11,0))
         
-        # if(boolList[1]):
-        #     cell = self.grid.get_cell_list_contents((21,11))
-        #     if(not cell):
-        #         b = AgentCar(self.uniqueIDs, self, (21,11), "Izquierda")
-        #         self.uniqueIDs += 1
-        #         self.schedule.add(b)
-        #         self.grid.place_agent(b, (21,11))
+        if(boolList[1]):
+            cell = self.grid.get_cell_list_contents((21,11))
+            if(not cell):
+                b = AgentCar(self.uniqueIDs, self, (21,11), "Izquierda")
+                self.uniqueIDs += 1
+                self.schedule.add(b)
+                self.grid.place_agent(b, (21,11))
 
-        # if(boolList[2]):
-        #     cell = self.grid.get_cell_list_contents((0,10))
-        #     if(not cell):
-        #         b = AgentCar(self.uniqueIDs, self, (0,10), "Derecha")
-        #         self.uniqueIDs += 1
-        #         self.schedule.add(b)
-        #         self.grid.place_agent(b, (0,10))
+        if(boolList[2]):
+            cell = self.grid.get_cell_list_contents((0,10))
+            if(not cell):
+                b = AgentCar(self.uniqueIDs, self, (0,10), "Derecha")
+                self.uniqueIDs += 1
+                self.schedule.add(b)
+                self.grid.place_agent(b, (0,10))
         
-        # if(boolList[3]):
-        #     cell = self.grid.get_cell_list_contents((10,21))
-        #     if(not cell):
-        #         b = AgentCar(self.uniqueIDs, self, (10,21), "Abajo")
-        #         self.uniqueIDs += 1
-        #         self.schedule.add(b)
-        #         self.grid.place_agent(b, (10,21))
-        
+        if(boolList[3]):
+            cell = self.grid.get_cell_list_contents((10,21))
+            if(not cell):
+                b = AgentCar(self.uniqueIDs, self, (10,21), "Abajo")
+                self.uniqueIDs += 1
+                self.schedule.add(b)
+                self.grid.place_agent(b, (10,21))
+
     def step(self):
         self.schedule.step()
+        for lights in range(len(self.trafficLights)):
+            self.trafficLights[lights].stepTrafficLight()
         self.addAgents()
