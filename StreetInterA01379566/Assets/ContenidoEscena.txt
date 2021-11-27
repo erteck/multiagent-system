@@ -1,0 +1,14 @@
+Realizado por Diego Alejandro Juárez Ruiz A01379566
+Fecha de entrega: 18/11/2021
+
+
+Esta escena incluye:
+
+- Un mapa de intersección con objetos y señales de transito obtenidos de la tienda se assets de unity
+- 6 objetos de autos, obtenidos de TurboSquid, 4 con materiales creados y agregados con ProBuilder, 1 con material sacado de Turbo Squid, 1 con material prediseñado
+- 6 puntos especificos de luz, entre luz roja y azul para hacer que se vean mejor los contornos
+- Ejemplos de texturas que se pueden utilizar en el reto
+- Archivos de texto con las licencias utilizadas para obtener los modelos y la acreditación a los autores
+
+
+Cada uno de los paquedes descargados de Unity Asset Store contiene sus propios materiales, prefabs y texturas
