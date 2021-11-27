@@ -1,7 +1,7 @@
 from ModeloInterseccionEq2 import *
 from mesa.visualization.modules import CanvasGrid
 from mesa.visualization.ModularVisualization import ModularServer
-import random
+
 def agent_portrayal(agent):
     portrayal = {"Shape": "circle",
                  "Filled": "true",

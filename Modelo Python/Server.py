@@ -7,13 +7,19 @@ model = ModelStreet(22,22)
 
 def positionsToJSON(ps):
     posDICT = []
-    for p in ps:
-        pos = {
-            "x" : p[0],
-            "z" : p[1],
-            "y" : p[2]
-        }
+    for p in range(len(ps)):
+        if(p > 3):
+            pos = {
+                "x" : ps[p][0],
+                "z" : ps[p][1],
+                "y" : ps[p][2]
+            }
+        else:
+            pos = {
+                "color": ps[p]
+            }
         posDICT.append(pos)
+        
     return json.dumps(posDICT)
 
 port = int(os.getenv('PORT', 8000))
@@ -22,7 +28,7 @@ port = int(os.getenv('PORT', 8000))
 def root():
     return jsonify([{"message":"Hello World from IBM Cloud!"}])
 
-@app.route('/multiagentes')
+@app.route('/simulation')
 def multiagentes():
     positions = model.step()
     return positionsToJSON(positions)

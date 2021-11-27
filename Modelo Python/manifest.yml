@@ -1,0 +1,4 @@
+---
+applications:
+ - name: MultiagentSystemTeam2
+   random-route: true

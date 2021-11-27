@@ -1,0 +1,4 @@
+Flask>=1.0.0
+matplotlib>=3.4.3
+Mesa>=0.8.9
+numpy>=1.21.3
