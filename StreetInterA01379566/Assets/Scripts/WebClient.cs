@@ -1,5 +1,6 @@
 ﻿// TC2008B Modelación de Sistemas Multiagentes con gráficas computacionales
-// C# client to interact with Python server via POST
+// C# client to interact with Python server via GET
+// Equipo 2
 // Sergio Ruiz-Loza, Ph.D. March 2021
 
 using System;
@@ -9,66 +10,108 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
 
-public class SphereController : MonoBehaviour
+[Serializable]
+public class TrafficLightJSON
+{
+    public string color;
+
+    public static TrafficLightJSON CreateFromJSON(string jsonString)
+    {
+        return JsonUtility.FromJson<TrafficLightJSON>(jsonString);
+    }
+}
+
+[Serializable]
+public class CarJSON
+{
+    public float x;
+    public float y;
+    public float z;
+    public string orientation;
+
+    public static CarJSON CreateFromJSON(string jsonString)
+    {
+        return JsonUtility.FromJson<CarJSON>(jsonString);
+    }
+}
+
+public class WebClient : MonoBehaviour
 {
     List<List<Vector3>> positions;
 
-    public GameObject[] spheres;
+    public GameObject[] cars;
+    //public List<GameObject>
+
+    public List<String> trafficLights;
+
+    public GameObject[] carsPrefabs;
+
+    private List<List<String>> orientations;
+
     public float timeToUpdate = 5.0f;
     private float timer;
     public float dt;
+
+    private int prevLen = 0;
 
     // IEnumerator - yield return
     IEnumerator SendData(string data)
     {
         WWWForm form = new WWWForm();
-        form.AddField("bundle", "the data");
-        string url = "http://localhost:8585";
+        //string url = "https://multiagentsystemteam2.mybluemix.net/simulation";d
+        string url = "localhost:8000/simulation";
         //using (UnityWebRequest www = UnityWebRequest.Post(url, form))
         using (UnityWebRequest www = UnityWebRequest.Get(url))
         {
             byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(data);
             www.uploadHandler = (UploadHandler)new UploadHandlerRaw(bodyRaw);
             www.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
-            //www.SetRequestHeader("Content-Type", "text/html");
             www.SetRequestHeader("Content-Type", "application/json");
 
             yield return www.SendWebRequest();          // Talk to Python
+
             if (www.isNetworkError || www.isHttpError)
             {
                 Debug.Log(www.error);
             }
             else
             {
-                //Debug.Log(www.downloadHandler.text);    // Answer from Python
-                //Debug.Log("Form upload complete!");
-                //Data tPos = JsonUtility.FromJson<Data>(www.downloadHandler.text.Replace('\'', '\"'));
-                //Debug.Log(tPos);
                 List<Vector3> newPositions = new List<Vector3>();
-                string txt = www.downloadHandler.text.Replace('\'', '\"');
-                txt = txt.TrimStart('"', '{', 'd', 'a', 't', 'a', ':', '[');
-                txt = "{\"" + txt;
-                txt = txt.TrimEnd(']', '}');
-                txt = txt + '}';
+                List<String> orientationCars = new List<String>();
+                string txt = www.downloadHandler.text;
+                txt = txt.Replace('\'', '\"');
+                txt = txt.TrimStart('[');
+                txt = txt.TrimEnd(']');
                 string[] strs = txt.Split(new string[] { "}, {" }, StringSplitOptions.None);
-                Debug.Log("strs.Length:" + strs.Length);
                 for (int i = 0; i < strs.Length; i++)
                 {
                     strs[i] = strs[i].Trim();
                     if (i == 0) strs[i] = strs[i] + '}';
                     else if (i == strs.Length - 1) strs[i] = '{' + strs[i];
                     else strs[i] = '{' + strs[i] + '}';
-                    Vector3 test = JsonUtility.FromJson<Vector3>(strs[i]);
-                    newPositions.Add(test);
+                    if (i <= 3)
+                    {
+                        TrafficLightJSON tl = TrafficLightJSON.CreateFromJSON(strs[i]);
+                        trafficLights[i] = tl.color;
+
+                    }
+                    else
+                    {
+                        CarJSON rumun = CarJSON.CreateFromJSON(strs[i]);
+                        Vector3 position = new Vector3(rumun.x, rumun.y ,rumun.z);
+                        newPositions.Add(position);
+
+                        orientationCars.Add(rumun.orientation);
+                    }
                 }
 
                 List<Vector3> poss = new List<Vector3>();
-                for (int s = 0; s < spheres.Length; s++)
+                for (int s = 0; s < cars.Length; s++)
                 {
-                    //spheres[s].transform.localPosition = newPositions[s];
                     poss.Add(newPositions[s]);
                 }
                 positions.Add(poss);
+                orientations.Add(orientationCars);
             }
         }
 
@@ -78,9 +121,15 @@ public class SphereController : MonoBehaviour
     void Start()
     {
         positions = new List<List<Vector3>>();
-        Debug.Log(spheres.Length);
+        orientations = new List<List<String>>();
+        trafficLights = new List<String>()
+        {
+            "t",
+            "e",
+            "s",
+            "t"
+        };
 #if UNITY_EDITOR
-        //string call = "WAAAAASSSSSAAAAAAAAAAP?";
         Vector3 fakePos = new Vector3(3.44f, 0, -15.707f);
         string json = EditorJsonUtility.ToJson(fakePos);
         //StartCoroutine(SendData(call));
@@ -92,10 +141,6 @@ public class SphereController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        /*
-         *    5 -------- 100
-         *    timer ----  ?
-         */
         timer -= Time.deltaTime;
         dt = 1.0f - (timer / timeToUpdate);
 
@@ -108,11 +153,27 @@ public class SphereController : MonoBehaviour
             StartCoroutine(SendData(json));
 #endif
         }
+        /*
+        // Crear autos y agregarlos al vector de carss
+            // Guardar siempre el len(cars) después de cada update y sacar el len al inicio
+            // La diferencia es el número de autos que hay que agregar al vector s
+        int newCars = positions[positions.Count-1].Count - 4 - prevLen;
+        prevLen = newCars;
 
+        for(int c = 0; c < newCars; c++){
+            GameObject carGameO = Instantiate(carsPrefabs[1]);
+            cars.Add(carGameO);
+        }
 
+        // Actualizar colores de los semáforos
+        for (int tl = 0; tl < 4; tl++) {
+            // Cambiar colores
+        }*/
+        // Actualizar posiciones de los autos
         if (positions.Count > 1)
         {
-            for (int s = 0; s < spheres.Length; s++)
+            // Actualiza las direcciones
+            for (int s = 4; s < cars.Length; s++)
             {
                 // Get the last position for s
                 List<Vector3> last = positions[positions.Count - 1];
@@ -120,10 +181,10 @@ public class SphereController : MonoBehaviour
                 List<Vector3> prevLast = positions[positions.Count - 2];
                 // Interpolate using dt
                 Vector3 interpolated = Vector3.Lerp(prevLast[s], last[s], dt);
-                spheres[s].transform.localPosition = interpolated;
+                cars[s].transform.localPosition = interpolated;
 
                 Vector3 dir = last[s] - prevLast[s];
-                spheres[s].transform.rotation = Quaternion.LookRotation(dir);
+                cars[s].transform.rotation = Quaternion.LookRotation(dir);
             }
         }
     }

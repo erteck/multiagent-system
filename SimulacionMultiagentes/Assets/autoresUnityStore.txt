@@ -1,6 +1,0 @@
-Autores de objetos utilizados en Unity Asset Store
-
-1. Floor materials pack v.1: VK GameDev
-2. Low Poly Buildings Lite: A3D
-3. Building Apartment: LowlyPoly
-4. Modular Lowpoly Streets (Free): EVPO Games
