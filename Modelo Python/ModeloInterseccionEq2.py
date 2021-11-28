@@ -494,6 +494,6 @@ class ModelStreet(Model):
         
         for pos in range(100,len(self.schedule.agents)):
             xy = self.schedule.agents[pos].pos
-            p = [xy[0],xy[1],0, self.schedule.agents[pos].orientation]
+            p = [xy[0],xy[1],0, self.schedule.agents[pos].orientation, self.schedule.agents[pos].unique_id]
             positions.append(p)
         return positions

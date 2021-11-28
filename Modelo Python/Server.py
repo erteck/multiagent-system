@@ -13,7 +13,8 @@ def positionsToJSON(ps):
                 "x" : ps[p][0],
                 "z" : ps[p][1],
                 "y" : ps[p][2],
-                "orientation": ps[p][3]
+                "orientation": ps[p][3],
+                "id": ps[p][4]
             }
         else:
             pos = {
