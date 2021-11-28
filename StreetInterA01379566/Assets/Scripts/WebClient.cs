@@ -10,6 +10,8 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
 
+
+
 [Serializable]
 public class TrafficLightJSON
 {
@@ -58,7 +60,7 @@ public class WebClient : MonoBehaviour
 
     private List<List<String>> orientations;
 
-    public float timeToUpdate = 2.0f; // 5
+    public float timeToUpdate = 5.0f; // 5
     private float timer;
     public float dt;
 
@@ -86,8 +88,8 @@ public class WebClient : MonoBehaviour
             }
             else
             {
-                List<Vector3> newPositions = new List<Vector3>();
-                List<String> orientationCars = new List<String>();
+                // List<Vector3> newPositions = new List<Vector3>();
+                // List<String> orientationCars = new List<String>();
                 string txt = www.downloadHandler.text;
                 Debug.Log(txt);
                 txt = txt.Replace('\'', '\"');
@@ -112,9 +114,9 @@ public class WebClient : MonoBehaviour
                         Vector3 position = new Vector3((rumrun.x*2)+1, rumrun.y ,(rumrun.z*2)+1);
                         positionsDict[rumrun.id] = position;
                         orientationsDict[rumrun.id] = rumrun.orientation;
-                        newPositions.Add(position);
+                        // newPositions.Add(position);
 
-                        orientationCars.Add(rumrun.orientation);
+                        // orientationCars.Add(rumrun.orientation);
                     }
                 }
                 
@@ -123,8 +125,8 @@ public class WebClient : MonoBehaviour
                     if(!carsDict.ContainsKey(kvp.Key))
                     {
                         // Agregar autos
-                        int newCars = newPositions.Count - prevLen;
-                        prevLen = prevLen + newCars;
+                        // int newCars = newPositions.Count - prevLen;
+                        // prevLen = prevLen + newCars;
                         GameObject carGameO = Instantiate(carsPrefabs[UnityEngine.Random.Range(0, carsPrefabs.Length)]);
                         carGameO.SetActive(true);
                         carsDict.Add(kvp.Key,carGameO);
@@ -139,28 +141,28 @@ public class WebClient : MonoBehaviour
                 }
             
 
-                List<Vector3> poss = new List<Vector3>();
-                //for (int s = 0; s < cars.Count; s++)
-                for (int s = 0; s < newPositions.Count; s++)
-                {
-                    poss.Add(newPositions[s]);
-                }
-                positions.Add(poss);
-                orientations.Add(orientationCars);
+        //         List<Vector3> poss = new List<Vector3>();
+        //         //for (int s = 0; s < cars.Count; s++)
+        //         for (int s = 0; s < newPositions.Count; s++)
+        //         {
+        //             poss.Add(newPositions[s]);
+        //         }
+        //         positions.Add(poss);
+        //         orientations.Add(orientationCars);
             }
         }
     
-        if (positions.Count > 0){
-            Debug.Log(positions[positions.Count - 1].Count);
-        }
+        // if (positions.Count > 0){
+        //     Debug.Log(positions[positions.Count - 1].Count);
+        // }
 
     }
 
     // Start is called before the first frame update
     void Start()
     {
-        positions = new List<List<Vector3>>();
-        orientations = new List<List<String>>();
+        // positions = new List<List<Vector3>>();
+        // orientations = new List<List<String>>();
         trafficLights = new List<String>()
         {
             "t",
@@ -195,7 +197,7 @@ public class WebClient : MonoBehaviour
 
         if(timer < 0)
         {
-            
+
 
 #if UNITY_EDITOR
             timer = timeToUpdate; // reset the timer
@@ -203,7 +205,8 @@ public class WebClient : MonoBehaviour
             string json = EditorJsonUtility.ToJson(fakePos);
             StartCoroutine(SendData(json));
 #endif
-        }
+        } 
+
         /*
         // Crear autos y agregarlos al vector de carss
             // Guardar siempre el len(cars) después de cada update y sacar el len al inicio
@@ -242,22 +245,60 @@ public class WebClient : MonoBehaviour
 
 
 
-        if(positionsDict.Count > 1)
+        if(positionsDict.Count > 0)
         {
+            Vector3 dir; 
             // Se itera en el diccionario actual para actualizar las posiciones de los automóviles
             foreach(KeyValuePair<int, Vector3> kvp in positionsDict)
             {
                 // Revisar si la llave se encuentra en el diccionario previous, entonces se puede interpolar
                 if(prevPositionsDict.ContainsKey(kvp.Key))
                 {
+                    Debug.Log("A: "+ prevPositionsDict[kvp.Key]);
+                    Debug.Log("B: "+ positionsDict[kvp.Key]);
+                    Debug.Log("Dt: "+ dt);
                     Vector3 interpolated = Vector3.Lerp(prevPositionsDict[kvp.Key], positionsDict[kvp.Key], dt);
-                    carsDict[kvp.Key].transform.localPosition = new Vector3(interpolated.x, prevPositionsDict[kvp.Key].y ,interpolated.z);
+                    Debug.Log("Lerp: "+ interpolated);
+                    carsDict[kvp.Key].transform.localPosition = new Vector3(interpolated.x, carsDict[kvp.Key].transform.position.y ,interpolated.z);
+                    if (orientationsDict[kvp.Key] == "Arriba")
+                    {
+                        dir = new Vector3(0, 0, 2);
+                    }
+                    else if (orientationsDict[kvp.Key] == "Derecha")
+                    {
+                        dir = new Vector3(2, 0, 0);
+                    }
+                    else if (orientationsDict[kvp.Key] == "Izquierda")
+                    {
+                        dir = new Vector3(-2, 0, 0);
+                    }
+                    else
+                    {
+                        dir = new Vector3(0, 0, -2);
+                    }
+                    carsDict[kvp.Key].transform.rotation = Quaternion.LookRotation(dir);
                 } 
                 // Si no se encuentra, entonces solo se coloca el automóvil en la coordenada correcta
                 else
                 {
                     carsDict[kvp.Key].transform.localPosition = new Vector3(positionsDict[kvp.Key].x,carsDict[kvp.Key].transform.position.y, positionsDict[kvp.Key].z);
-                    // cars[s].transform.position.y
+                    if (orientationsDict[kvp.Key] == "Arriba")
+                    {
+                        dir = new Vector3(0, 0, 2);
+                    }
+                    else if (orientationsDict[kvp.Key] == "Derecha")
+                    {
+                        dir = new Vector3(2, 0, 0);
+                    }
+                    else if (orientationsDict[kvp.Key] == "Izquierda")
+                    {
+                        dir = new Vector3(-2, 0, 0);
+                    }
+                    else
+                    {
+                        dir = new Vector3(0, 0, -2);
+                    }
+                    carsDict[kvp.Key].transform.rotation = Quaternion.LookRotation(dir);
                 }
             }
             // Se itera para eliminar los automóviles que salen
