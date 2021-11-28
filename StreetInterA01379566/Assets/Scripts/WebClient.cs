@@ -28,6 +28,7 @@ public class CarJSON
     public float y;
     public float z;
     public string orientation;
+    public int id;
 
     public static CarJSON CreateFromJSON(string jsonString)
     {
@@ -39,8 +40,17 @@ public class WebClient : MonoBehaviour
 {
     List<List<Vector3>> positions;
 
+    Dictionary<int, Vector3> positionsDict;
+    Dictionary<int, Vector3> prevPositionsDict;
+    Dictionary<int, GameObject> carsDict;
+    Dictionary<int, string> orientationsDict;
+
+
     public List<GameObject> cars;
     //public List<GameObject>
+
+    public List<GameObject> tls;
+   
 
     public List<String> trafficLights;
 
@@ -48,7 +58,7 @@ public class WebClient : MonoBehaviour
 
     private List<List<String>> orientations;
 
-    public float timeToUpdate = 5.0f;
+    public float timeToUpdate = 2.0f; // 5
     private float timer;
     public float dt;
 
@@ -98,24 +108,36 @@ public class WebClient : MonoBehaviour
                     }
                     else
                     {
-                        CarJSON rumun = CarJSON.CreateFromJSON(strs[i]);
-                        Vector3 position = new Vector3((rumun.x*2)+1, rumun.y ,(rumun.z*2)+1);
+                        CarJSON rumrun = CarJSON.CreateFromJSON(strs[i]);
+                        Vector3 position = new Vector3((rumrun.x*2)+1, rumrun.y ,(rumrun.z*2)+1);
+                        positionsDict[rumrun.id] = position;
+                        orientationsDict[rumrun.id] = rumrun.orientation;
                         newPositions.Add(position);
 
-                        orientationCars.Add(rumun.orientation);
+                        orientationCars.Add(rumrun.orientation);
                     }
                 }
                 
-                // Agregar autos
-                int newCars = newPositions.Count - prevLen;
-                prevLen = prevLen + newCars;
-
-                for(int c = 0; c < newCars; c++){
-                    //GameObject carGameO = Instantiate(carsPrefabs[1]);
-                    GameObject carGameO = Instantiate(carsPrefabs[UnityEngine.Random.Range(0, carsPrefabs.Length)]);
-                    carGameO.SetActive(true);
-                    cars.Add(carGameO);
+                foreach(KeyValuePair<int, Vector3> kvp in positionsDict)
+                {
+                    if(!carsDict.ContainsKey(kvp.Key))
+                    {
+                        // Agregar autos
+                        int newCars = newPositions.Count - prevLen;
+                        prevLen = prevLen + newCars;
+                        GameObject carGameO = Instantiate(carsPrefabs[UnityEngine.Random.Range(0, carsPrefabs.Length)]);
+                        carGameO.SetActive(true);
+                        carsDict.Add(kvp.Key,carGameO);
+                        // for(int c = 0; c < newCars; c++)f
+                        // {
+                        // //GameObject carGameO = Instantiate(carsPrefabs[1]);
+                        // GameObject carGameO = Instantiate(carsPrefabs[UnityEngine.Random.Range(0, carsPrefabs.Length)]);
+                        // carGameO.SetActive(true);
+                        // cars.Add(carGameO);
+                        // }
+                    }
                 }
+            
 
                 List<Vector3> poss = new List<Vector3>();
                 //for (int s = 0; s < cars.Count; s++)
@@ -146,6 +168,13 @@ public class WebClient : MonoBehaviour
             "s",
             "t"
         };
+        positionsDict = new Dictionary<int, Vector3>();
+        prevPositionsDict = new Dictionary<int, Vector3>();
+        orientationsDict = new Dictionary<int, string>();
+        carsDict = new Dictionary<int, GameObject>();
+
+
+
 #if UNITY_EDITOR
         Vector3 fakePos = new Vector3(3.44f, 0, -15.707f);
         string json = EditorJsonUtility.ToJson(fakePos);
@@ -155,6 +184,9 @@ public class WebClient : MonoBehaviour
 #endif
     }
 
+
+
+
     // Update is called once per frame
     void Update()
     {
@@ -163,6 +195,8 @@ public class WebClient : MonoBehaviour
 
         if(timer < 0)
         {
+            
+
 #if UNITY_EDITOR
             timer = timeToUpdate; // reset the timer
             Vector3 fakePos = new Vector3(3.44f, 0, -15.707f);
@@ -180,46 +214,98 @@ public class WebClient : MonoBehaviour
         for(int c = 0; c < newCars; c++){
             GameObject carGameO = Instantiate(carsPrefabs[1]);
             cars.Add(carGameO);
-        }
-
-        // Actualizar colores de los semáforos
-        for (int tl = 0; tl < 4; tl++) {
-            // Cambiar colores
         }*/
-        // Actualizar posiciones de los autos
-        
-        
-        
-        if (positions.Count > 1)
-        {
-            // Actualiza las direcciones
-            for (int s = 0; s < cars.Count; s++)
-            {
-                // longitud de positions[-1]
-                // Positions [-2]
-                // Get the last position for s
 
-                if ( s <  positions[positions.Count - 2].Count)
-                {
-                    List<Vector3> last = positions[positions.Count - 1];
-                    // Get the previous to last position for s
-                    List<Vector3> prevLast = positions[positions.Count - 2];
-                    // Interpolate using dt
-                    Vector3 interpolated = Vector3.Lerp(prevLast[s], last[s], dt);
-                    cars[s].transform.localPosition = new Vector3(interpolated.x,cars[s].transform.position.y,interpolated.z);
-                    Vector3 dir = last[s] - prevLast[s];
-                    cars[s].transform.rotation = Quaternion.LookRotation(dir);
-                }
-                else
-                {
-                    Vector3 n = positions[positions.Count-1][s];
-                    cars[s].transform.localPosition = new Vector3(n.x,cars[s].transform.position.y,n.z);
-                }
+        //  public List<String> trafficLights;
+        // Actualizar colores de los semáforos
+        for (int tl = 0; tl < 4; tl++) 
+        {
+            if (trafficLights[tl] == "Verde")
+            {
+                tls[tl].gameObject.transform.GetChild(0).gameObject.SetActive(true);
+                tls[tl].gameObject.transform.GetChild(1).gameObject.SetActive(false);
+                tls[tl].gameObject.transform.GetChild(2).gameObject.SetActive(false);
+            }
+            else if (trafficLights[tl] == "Rojo")
+            {
+                tls[tl].gameObject.transform.GetChild(0).gameObject.SetActive(false);
+                tls[tl].gameObject.transform.GetChild(1).gameObject.SetActive(true);
+                tls[tl].gameObject.transform.GetChild(2).gameObject.SetActive(false);
+            }
+            else if(trafficLights[tl] == "Amarillo")
+            {
+                tls[tl].gameObject.transform.GetChild(0).gameObject.SetActive(false);
+                tls[tl].gameObject.transform.GetChild(1).gameObject.SetActive(false);
+                tls[tl].gameObject.transform.GetChild(2).gameObject.SetActive(true);
             }
         }
-        if(positions.Count > 3)
+
+
+
+        if(positionsDict.Count > 1)
         {
-            positions.RemoveAt(0);
+            // Se itera en el diccionario actual para actualizar las posiciones de los automóviles
+            foreach(KeyValuePair<int, Vector3> kvp in positionsDict)
+            {
+                // Revisar si la llave se encuentra en el diccionario previous, entonces se puede interpolar
+                if(prevPositionsDict.ContainsKey(kvp.Key))
+                {
+                    Vector3 interpolated = Vector3.Lerp(prevPositionsDict[kvp.Key], positionsDict[kvp.Key], dt);
+                    carsDict[kvp.Key].transform.localPosition = new Vector3(interpolated.x, prevPositionsDict[kvp.Key].y ,interpolated.z);
+                } 
+                // Si no se encuentra, entonces solo se coloca el automóvil en la coordenada correcta
+                else
+                {
+                    carsDict[kvp.Key].transform.localPosition = new Vector3(positionsDict[kvp.Key].x,carsDict[kvp.Key].transform.position.y, positionsDict[kvp.Key].z);
+                    // cars[s].transform.position.y
+                }
+            }
+            // Se itera para eliminar los automóviles que salen
+            foreach(KeyValuePair<int,Vector3> kvp in prevPositionsDict)
+            {
+                if(!positionsDict.ContainsKey(kvp.Key))
+                {
+                    Destroy(carsDict[kvp.Key]);
+                    orientationsDict.Remove(kvp.Key);
+                    carsDict.Remove(kvp.Key);
+                }
+            }
+            prevPositionsDict = positionsDict;
+            positionsDict = new Dictionary<int, Vector3>();
         }
+
+
+        // // Actualizar posiciones de los autos
+        // if (positions.Count > 1)
+        // {
+        //     // Actualiza las direcciones
+        //     for (int s = 0; s < cars.Count; s++)
+        //     {
+        //         // longitud de positions[-1]
+        //         // Positions [-2]
+        //         // Get the last position for s
+
+        //         if ( s <  positions[positions.Count - 2].Count)
+        //         {
+        //             List<Vector3> last = positions[positions.Count - 1];
+        //             // Get the previous to last position for s
+        //             List<Vector3> prevLast = positions[positions.Count - 2];
+        //             // Interpolate using dt
+        //             Vector3 interpolated = Vector3.Lerp(prevLast[s], last[s], dt);
+        //             cars[s].transform.localPosition = new Vector3(interpolated.x,cars[s].transform.position.y,interpolated.z);
+        //             Vector3 dir = last[s] - prevLast[s];
+        //             cars[s].transform.rotation = Quaternion.LookRotation(dir);
+        //         }
+        //         else
+        //         {
+        //             Vector3 n = positions[positions.Count-1][s];
+        //             cars[s].transform.localPosition = new Vector3(n.x,cars[s].transform.position.y,n.z);
+        //         }
+        //     }
+        // }
+        // if(positions.Count > 3)
+        // {
+        //     positions.RemoveAt(0);
+        // }
     }
 }
