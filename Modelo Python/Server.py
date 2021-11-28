@@ -29,6 +29,12 @@ port = int(os.getenv('PORT', 8000))
 def root():
     return jsonify([{"message":"Hello World from IBM Cloud!"}])
 
+@app.route('/restart')
+def restart():
+    global model
+    model = ModelStreet(22,22)
+    return jsonify([{"message":"Restablecido"}])
+
 @app.route('/simulation')
 def multiagentes():
     positions = model.step()

@@ -39,7 +39,7 @@ public class WebClient : MonoBehaviour
 {
     List<List<Vector3>> positions;
 
-    public GameObject[] cars;
+    public List<GameObject> cars;
     //public List<GameObject>
 
     public List<String> trafficLights;
@@ -58,7 +58,7 @@ public class WebClient : MonoBehaviour
     IEnumerator SendData(string data)
     {
         WWWForm form = new WWWForm();
-        //string url = "https://multiagentsystemteam2.mybluemix.net/simulation";d
+        //string url = "https://multiagentsystemteam2.mybluemix.net/simulation";
         string url = "localhost:8000/simulation";
         //using (UnityWebRequest www = UnityWebRequest.Post(url, form))
         using (UnityWebRequest www = UnityWebRequest.Get(url))
@@ -79,6 +79,7 @@ public class WebClient : MonoBehaviour
                 List<Vector3> newPositions = new List<Vector3>();
                 List<String> orientationCars = new List<String>();
                 string txt = www.downloadHandler.text;
+                Debug.Log(txt);
                 txt = txt.Replace('\'', '\"');
                 txt = txt.TrimStart('[');
                 txt = txt.TrimEnd(']');
@@ -98,21 +99,37 @@ public class WebClient : MonoBehaviour
                     else
                     {
                         CarJSON rumun = CarJSON.CreateFromJSON(strs[i]);
-                        Vector3 position = new Vector3(rumun.x, rumun.y ,rumun.z);
+                        Vector3 position = new Vector3((rumun.x*2)+1, rumun.y ,(rumun.z*2)+1);
                         newPositions.Add(position);
 
                         orientationCars.Add(rumun.orientation);
                     }
                 }
+                
+                // Agregar autos
+                int newCars = newPositions.Count - prevLen;
+                prevLen = prevLen + newCars;
+
+                for(int c = 0; c < newCars; c++){
+                    //GameObject carGameO = Instantiate(carsPrefabs[1]);
+                    GameObject carGameO = Instantiate(carsPrefabs[UnityEngine.Random.Range(0, carsPrefabs.Length)]);
+                    carGameO.SetActive(true);
+                    cars.Add(carGameO);
+                }
 
                 List<Vector3> poss = new List<Vector3>();
-                for (int s = 0; s < cars.Length; s++)
+                //for (int s = 0; s < cars.Count; s++)
+                for (int s = 0; s < newPositions.Count; s++)
                 {
                     poss.Add(newPositions[s]);
                 }
                 positions.Add(poss);
                 orientations.Add(orientationCars);
             }
+        }
+    
+        if (positions.Count > 0){
+            Debug.Log(positions[positions.Count - 1].Count);
         }
 
     }
@@ -170,22 +187,39 @@ public class WebClient : MonoBehaviour
             // Cambiar colores
         }*/
         // Actualizar posiciones de los autos
+        
+        
+        
         if (positions.Count > 1)
         {
             // Actualiza las direcciones
-            for (int s = 4; s < cars.Length; s++)
+            for (int s = 0; s < cars.Count; s++)
             {
+                // longitud de positions[-1]
+                // Positions [-2]
                 // Get the last position for s
-                List<Vector3> last = positions[positions.Count - 1];
-                // Get the previous to last position for s
-                List<Vector3> prevLast = positions[positions.Count - 2];
-                // Interpolate using dt
-                Vector3 interpolated = Vector3.Lerp(prevLast[s], last[s], dt);
-                cars[s].transform.localPosition = interpolated;
 
-                Vector3 dir = last[s] - prevLast[s];
-                cars[s].transform.rotation = Quaternion.LookRotation(dir);
+                if ( s <  positions[positions.Count - 2].Count)
+                {
+                    List<Vector3> last = positions[positions.Count - 1];
+                    // Get the previous to last position for s
+                    List<Vector3> prevLast = positions[positions.Count - 2];
+                    // Interpolate using dt
+                    Vector3 interpolated = Vector3.Lerp(prevLast[s], last[s], dt);
+                    cars[s].transform.localPosition = new Vector3(interpolated.x,cars[s].transform.position.y,interpolated.z);
+                    Vector3 dir = last[s] - prevLast[s];
+                    cars[s].transform.rotation = Quaternion.LookRotation(dir);
+                }
+                else
+                {
+                    Vector3 n = positions[positions.Count-1][s];
+                    cars[s].transform.localPosition = new Vector3(n.x,cars[s].transform.position.y,n.z);
+                }
             }
+        }
+        if(positions.Count > 3)
+        {
+            positions.RemoveAt(0);
         }
     }
 }
