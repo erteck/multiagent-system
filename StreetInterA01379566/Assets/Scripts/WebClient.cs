@@ -60,7 +60,7 @@ public class WebClient : MonoBehaviour
 
     private List<List<String>> orientations;
 
-    public float timeToUpdate = 5.0f; // 5
+    public float timeToUpdate = 1.0f; // 5
     private float timer;
     public float dt;
 
@@ -90,6 +90,8 @@ public class WebClient : MonoBehaviour
             {
                 // List<Vector3> newPositions = new List<Vector3>();
                 // List<String> orientationCars = new List<String>();
+                prevPositionsDict = positionsDict;
+                positionsDict = new Dictionary<int, Vector3>();
                 string txt = www.downloadHandler.text;
                 Debug.Log(txt);
                 txt = txt.Replace('\'', '\"');
@@ -192,6 +194,7 @@ public class WebClient : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        Vector3 dir;
         timer -= Time.deltaTime;
         dt = 1.0f - (timer / timeToUpdate);
 
@@ -202,9 +205,39 @@ public class WebClient : MonoBehaviour
 #if UNITY_EDITOR
             timer = timeToUpdate; // reset the timer
             Vector3 fakePos = new Vector3(3.44f, 0, -15.707f);
+            foreach(KeyValuePair<int,Vector3> kvp in prevPositionsDict)
+            {
+                if(!positionsDict.ContainsKey(kvp.Key))
+                {
+                    Destroy(carsDict[kvp.Key]);
+                    orientationsDict.Remove(kvp.Key);
+                    carsDict.Remove(kvp.Key);
+                }
+            }
             string json = EditorJsonUtility.ToJson(fakePos);
             StartCoroutine(SendData(json));
 #endif
+            foreach(KeyValuePair<int, string> kvp in orientationsDict)
+            {   //Vector3 dir; 
+                if (orientationsDict[kvp.Key] == "Arriba")
+                {
+                    dir = new Vector3(0, 0, 2);
+                }
+                else if (orientationsDict[kvp.Key] == "Derecha")
+                {
+                    dir = new Vector3(2, 0, 0);
+                }
+                else if (orientationsDict[kvp.Key] == "Izquierda")
+                {
+                    dir = new Vector3(-2, 0, 0);
+                }
+                else
+                {
+                    dir = new Vector3(0, 0, -2);
+                }
+                carsDict[kvp.Key].transform.rotation = Quaternion.LookRotation(dir);
+            }
+
         } 
 
         /*
@@ -247,36 +280,14 @@ public class WebClient : MonoBehaviour
 
         if(positionsDict.Count > 0)
         {
-            Vector3 dir; 
             // Se itera en el diccionario actual para actualizar las posiciones de los automóviles
             foreach(KeyValuePair<int, Vector3> kvp in positionsDict)
             {
                 // Revisar si la llave se encuentra en el diccionario previous, entonces se puede interpolar
                 if(prevPositionsDict.ContainsKey(kvp.Key))
                 {
-                    Debug.Log("A: "+ prevPositionsDict[kvp.Key]);
-                    Debug.Log("B: "+ positionsDict[kvp.Key]);
-                    Debug.Log("Dt: "+ dt);
                     Vector3 interpolated = Vector3.Lerp(prevPositionsDict[kvp.Key], positionsDict[kvp.Key], dt);
-                    Debug.Log("Lerp: "+ interpolated);
                     carsDict[kvp.Key].transform.localPosition = new Vector3(interpolated.x, carsDict[kvp.Key].transform.position.y ,interpolated.z);
-                    if (orientationsDict[kvp.Key] == "Arriba")
-                    {
-                        dir = new Vector3(0, 0, 2);
-                    }
-                    else if (orientationsDict[kvp.Key] == "Derecha")
-                    {
-                        dir = new Vector3(2, 0, 0);
-                    }
-                    else if (orientationsDict[kvp.Key] == "Izquierda")
-                    {
-                        dir = new Vector3(-2, 0, 0);
-                    }
-                    else
-                    {
-                        dir = new Vector3(0, 0, -2);
-                    }
-                    carsDict[kvp.Key].transform.rotation = Quaternion.LookRotation(dir);
                 } 
                 // Si no se encuentra, entonces solo se coloca el automóvil en la coordenada correcta
                 else
@@ -301,18 +312,22 @@ public class WebClient : MonoBehaviour
                     carsDict[kvp.Key].transform.rotation = Quaternion.LookRotation(dir);
                 }
             }
-            // Se itera para eliminar los automóviles que salen
+            // Se itera para eliminar los automóviles que salens
             foreach(KeyValuePair<int,Vector3> kvp in prevPositionsDict)
             {
                 if(!positionsDict.ContainsKey(kvp.Key))
                 {
-                    Destroy(carsDict[kvp.Key]);
-                    orientationsDict.Remove(kvp.Key);
-                    carsDict.Remove(kvp.Key);
+                    //Destroy(carsDict[kvp.Key]);
+                    if (carsDict.ContainsKey(kvp.Key))
+                    {
+                        if (carsDict[kvp.Key].activeInHierarchy)
+                        {
+                            carsDict[kvp.Key].SetActive(false);
+                        }
+                    }
                 }
             }
-            prevPositionsDict = positionsDict;
-            positionsDict = new Dictionary<int, Vector3>();
+            
         }
 
 
