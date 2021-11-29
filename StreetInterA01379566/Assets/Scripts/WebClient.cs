@@ -32,6 +32,9 @@ public class CarJSON
     public string orientation;
     public int id;
 
+    public int destinationx;
+    public int destinationy;
+
     public static CarJSON CreateFromJSON(string jsonString)
     {
         return JsonUtility.FromJson<CarJSON>(jsonString);
@@ -46,6 +49,7 @@ public class WebClient : MonoBehaviour
     Dictionary<int, Vector3> prevPositionsDict;
     Dictionary<int, GameObject> carsDict;
     Dictionary<int, string> orientationsDict;
+    Dictionary<int, List<int>> destinationsDict;
 
 
     public List<GameObject> cars;
@@ -137,6 +141,11 @@ public class WebClient : MonoBehaviour
                         Vector3 position = new Vector3((rumrun.x*2)+1, rumrun.y ,(rumrun.z*2)+1);
                         positionsDict[rumrun.id] = position;
                         orientationsDict[rumrun.id] = rumrun.orientation;
+                        List<int> dest = new List<int>();
+                        dest.Add(rumrun.destinationx);
+                        dest.Add(rumrun.destinationy);
+                        destinationsDict[rumrun.id] = dest;
+                        //Debug.Log(destinationsDict[rumrun.id][0] + " "+ destinationsDict[rumrun.id][1]);
                         // newPositions.Add(position);
 
                         // orientationCars.Add(rumrun.orientation);
@@ -196,6 +205,7 @@ public class WebClient : MonoBehaviour
         positionsDict = new Dictionary<int, Vector3>();
         prevPositionsDict = new Dictionary<int, Vector3>();
         orientationsDict = new Dictionary<int, string>();
+        destinationsDict = new Dictionary<int, List<int>>();
         carsDict = new Dictionary<int, GameObject>();
 
 
@@ -236,6 +246,7 @@ public class WebClient : MonoBehaviour
                     {
                         Destroy(carsDict[kvp.Key]);
                         orientationsDict.Remove(kvp.Key);
+                        destinationsDict.Remove(kvp.Key);
                         carsDict.Remove(kvp.Key);
                     }
 

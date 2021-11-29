@@ -15,7 +15,8 @@ def positionsToJSON(ps):
                 "y" : ps[p][2],
                 "orientation": ps[p][3],
                 "id": ps[p][4],
-                "destination": ps[p][5]
+                "destinationx": ps[p][5][0],
+                "destinationy": ps[p][5][1]
             }
         else:
             pos = {
