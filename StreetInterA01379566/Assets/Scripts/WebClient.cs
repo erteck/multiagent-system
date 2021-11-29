@@ -60,13 +60,34 @@ public class WebClient : MonoBehaviour
 
     private List<List<String>> orientations;
 
-    public float timeToUpdate = 1.0f; // 5
+    public float timeToUpdate = 1f; // 5
     private float timer;
     public float dt;
 
     private int prevLen = 0;
 
     // IEnumerator - yield return
+
+    IEnumerator RestartSimulation(string data)
+    {
+        string urlRestart = "localhost:8000/restart";
+        using (UnityWebRequest www = UnityWebRequest.Get(urlRestart))
+        {
+            byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(data);
+            www.uploadHandler = (UploadHandler)new UploadHandlerRaw(bodyRaw);
+            www.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
+            www.SetRequestHeader("Content-Type", "application/json");
+
+            yield return www.SendWebRequest();          // Talk to Python
+
+            if (www.isNetworkError || www.isHttpError)
+            {
+                Debug.Log(www.error);
+            }
+        }
+    }
+
+
     IEnumerator SendData(string data)
     {
         WWWForm form = new WWWForm();
@@ -183,6 +204,7 @@ public class WebClient : MonoBehaviour
         Vector3 fakePos = new Vector3(3.44f, 0, -15.707f);
         string json = EditorJsonUtility.ToJson(fakePos);
         //StartCoroutine(SendData(call));
+        StartCoroutine(RestartSimulation(json));
         StartCoroutine(SendData(json));
         timer = timeToUpdate;
 #endif
@@ -195,7 +217,8 @@ public class WebClient : MonoBehaviour
     void Update()
     {
         Vector3 dir;
-        timer -= Time.deltaTime;
+        //timer -= Time.deltaTime;
+        timer -= 2;
         dt = 1.0f - (timer / timeToUpdate);
 
         if(timer < 0)
@@ -209,9 +232,13 @@ public class WebClient : MonoBehaviour
             {
                 if(!positionsDict.ContainsKey(kvp.Key))
                 {
-                    Destroy(carsDict[kvp.Key]);
-                    orientationsDict.Remove(kvp.Key);
-                    carsDict.Remove(kvp.Key);
+                    if (carsDict.ContainsKey(kvp.Key))
+                    {
+                        Destroy(carsDict[kvp.Key]);
+                        orientationsDict.Remove(kvp.Key);
+                        carsDict.Remove(kvp.Key);
+                    }
+
                 }
             }
             string json = EditorJsonUtility.ToJson(fakePos);
