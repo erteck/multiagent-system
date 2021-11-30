@@ -6,7 +6,7 @@
  * Erick Alberto Bustos Cruz       A01378966
  * Luis Enrique Zamarripa Marin    A01379918
  * En conjunto con Sergio Ruiz Loza, PhD
- * Ultima modificacion: 30/11/21 
+ * Diciembre 2021
  */
 
 // Importaciones
@@ -92,7 +92,7 @@ public class WebClient : MonoBehaviour
      */
     IEnumerator RestartSimulation(string data)
     {
-         WWWForm form = new WWWForm();
+        WWWForm form = new WWWForm();
         string urlRestart = "localhost:8000/restart";
         //string urlRestart = "https://multiagentsystemteam2.mybluemix.net/restart";
         using (UnityWebRequest www = UnityWebRequest.Post(urlRestart, form))
