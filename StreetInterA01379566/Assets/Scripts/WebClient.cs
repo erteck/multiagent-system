@@ -1,8 +1,15 @@
-﻿// TC2008B Modelación de Sistemas Multiagentes con gráficas computacionales
-// C# client to interact with Python server via GET
-// Equipo 2
-// Sergio Ruiz-Loza, Ph.D. March 2021
+﻿/*
+ * TC2008B Modelacion de sistemas multiagentes con graficas computacionales (Gpo 301)
+ * Autores:
+ * Diego Alejandro Juarez Ruiz     A01379566
+ * Edna Jacqueline Zavala Ortega   A01750480
+ * Erick Alberto Bustos Cruz       A01378966
+ * Luis Enrique Zamarripa Marin    A01379918
+ * En conjunto con Sergio Ruiz Loza, PhD
+ * Ultima modificacion: 30/11/21 
+ */
 
+// Importaciones
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -10,8 +17,10 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
 
-
-
+/*
+ * Clase que permite crear un objeto de tipo TrafficLightJSON para organizar
+ * la informacion de los semaforos proveniente del modelo en la nube
+ */
 [Serializable]
 public class TrafficLightJSON
 {
@@ -23,6 +32,10 @@ public class TrafficLightJSON
     }
 }
 
+/*
+ * Clase que permite crear un objeto de tipo CarJSON para organizar
+ * la informacion de los automoviles proveniente del modelo en la nube
+ */
 [Serializable]
 public class CarJSON
 {
@@ -31,63 +44,65 @@ public class CarJSON
     public float z;
     public string orientation;
     public int id;
-
     public int destinationx;
     public int destinationy;
 
-    
     public static CarJSON CreateFromJSON(string jsonString)
     {
         return JsonUtility.FromJson<CarJSON>(jsonString);
     }
 }
 
+/*
+ * Clase WebClient que realiza las solicitudes al servidor para obtener
+ * las nuevas posiciones de los autos y reiniciar la simulacion siempre
+ * que se ejecute
+ */
 public class WebClient : MonoBehaviour
 {
-    List<List<Vector3>> positions;
-
+    // Inicializacion de diccionarios, listas y flotantes a utilizar
+    
+    // Diccionario en el que se asocia el id del automovil con la posicion actualizada
+    // obtenida desde el modelo
     Dictionary<int, Vector3> positionsDict;
+    // Diccionario en el que se asocia el id del automovil con la posicion previa (necesaria
+    // para la interpolacion)
     Dictionary<int, Vector3> prevPositionsDict;
+    // Diccionario en el que se asocia el id del automovil con el GameObject en la escena 
     Dictionary<int, GameObject> carsDict;
+    // Diccionario en el que se asocia el id del automovil con su orientacion actual 
     Dictionary<int, string> orientationsDict;
+    // Diccionario en el que se asocia el id del automovil con las coordenadas de su destino
     Dictionary<int, List<int>> destinationsDict;
 
-    public Material[] arrowMaterials;
-
-    public List<GameObject> cars;
-    //public List<GameObject>
-
+    //public Material[] arrowMaterials;
     public List<GameObject> tls;
-   
     public float simVel = 1;
     public List<String> trafficLights;
-
     public GameObject[] carsPrefabs;
-
-    private List<List<String>> orientations;
-
-    public float timeToUpdate = 1f; // 5
+    public float timeToUpdate = 1f;
     private float timer;
     public float dt;
 
-    private int prevLen = 0;
 
-    // IEnumerator - yield return
-
+    /*
+     * Funcion que solicita que al servidor reinicie la simulacion
+     * cada que se corre la simulacion de nuevo. Por ello, solo se
+     * llama en el Start()
+     */
     IEnumerator RestartSimulation(string data)
     {
          WWWForm form = new WWWForm();
         string urlRestart = "localhost:8000/restart";
         //string urlRestart = "https://multiagentsystemteam2.mybluemix.net/restart";
         using (UnityWebRequest www = UnityWebRequest.Post(urlRestart, form))
-        //using (UnityWebRequest www = UnityWebRequest.Get(urlRestart))
         {
             byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(data);
             www.uploadHandler = (UploadHandler)new UploadHandlerRaw(bodyRaw);
             www.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
             www.SetRequestHeader("Content-Type", "application/json");
 
-            yield return www.SendWebRequest();          // Talk to Python
+            yield return www.SendWebRequest(); 
 
             if (www.isNetworkError || www.isHttpError)
             {
@@ -96,112 +111,108 @@ public class WebClient : MonoBehaviour
         }
     }
 
-
+    /*
+     * Funcion que solicita que solicita al servidor los datos de un nuevo paso del modelo,
+     * recibe y procesa el JSON recibido para poder hacer uso de dichas variables en el
+     * update.
+     */
     IEnumerator SendData(string data)
     {
         WWWForm form = new WWWForm();
-        //string url = "https://multiagentsystemteam2.mybluemix.net/simulation";
-        //https://multiagentsystemteam2.mybluemix.net/simulation
+        // Link a la nube de IBM: https://multiagentsystemteam2.mybluemix.net/simulation
         string url = "localhost:8000/simulation";
         //string url = "https://multiagentsystemteam2.mybluemix.net/simulation";
+        
+        // Hacer request al servidor 
         using (UnityWebRequest www = UnityWebRequest.Post(url, form))
-        //using (UnityWebRequest www = UnityWebRequest.Get(url))
         {
+            
             byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(data);
             www.uploadHandler = (UploadHandler)new UploadHandlerRaw(bodyRaw);
             www.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
             www.SetRequestHeader("Content-Type", "application/json");
 
-            yield return www.SendWebRequest();          // Talk to Python
+            yield return www.SendWebRequest(); 
 
+            // Si hay error, se pone en la consola
             if (www.isNetworkError || www.isHttpError)
             {
                 Debug.Log(www.error);
             }
             else
             {
-                // List<Vector3> newPositions = new List<Vector3>();
-                // List<String> orientationCars = new List<String>();
                 prevPositionsDict = positionsDict;
                 positionsDict = new Dictionary<int, Vector3>();
                 string txt = www.downloadHandler.text;
-                //Debug.Log(txt);
                 txt = txt.Replace('\'', '\"');
                 txt = txt.TrimStart('[');
                 txt = txt.TrimEnd(']');
                 string[] strs = txt.Split(new string[] { "}, {" }, StringSplitOptions.None);
+
+                // Procesar JSON 
                 for (int i = 0; i < strs.Length; i++)
                 {
+                    // Quitar llaves
                     strs[i] = strs[i].Trim();
                     if (i == 0) strs[i] = strs[i] + '}';
                     else if (i == strs.Length - 1) strs[i] = '{' + strs[i];
                     else strs[i] = '{' + strs[i] + '}';
                     if (i <= 3)
                     {
+                        // Agregar colores de los semaforos
                         TrafficLightJSON tl = TrafficLightJSON.CreateFromJSON(strs[i]);
                         trafficLights[i] = tl.color;
 
                     }
                     else
                     {
+                        // Armar CarJSON con informacon recibida
                         CarJSON rumrun = CarJSON.CreateFromJSON(strs[i]);
+                        
+                        // Realizar ajustes para escalar las dimensiones de mesa a Unity
                         Vector3 position = new Vector3((rumrun.x*2)+1, rumrun.y ,(rumrun.z*2)+1);
+
+                        // Agregar posicion del auto
                         positionsDict[rumrun.id] = position;
+
+                        // Agregar orientacion del auto
                         orientationsDict[rumrun.id] = rumrun.orientation;
+
+                        // Agregar del destino del auto
                         List<int> dest = new List<int>();
                         dest.Add(rumrun.destinationx* 2 + 1);
                         dest.Add(rumrun.destinationy * 2 + 1);
                         destinationsDict[rumrun.id] = dest;
-                        //Debug.Log(destinationsDict[rumrun.id][0] + " "+ destinationsDict[rumrun.id][1]);
-                        // newPositions.Add(position);
-
-                        // orientationCars.Add(rumrun.orientation);
                     }
                 }
                 
+                // Iterar sobre los IDs de los autos que actualmente tienen posicion
                 foreach(KeyValuePair<int, Vector3> kvp in positionsDict)
                 {
+                    // Si dicho auto no tiene un GameObject Asignado, crearlo
                     if(!carsDict.ContainsKey(kvp.Key))
                     {
-                        // Agregar autos
-                        // int newCars = newPositions.Count - prevLen;
-                        // prevLen = prevLen + newCars;
+                        // Escoger de manera aleatoria un modelo de auto
                         GameObject carGameO = Instantiate(carsPrefabs[UnityEngine.Random.Range(0, carsPrefabs.Length)]);
+                        // Hacer visible el GameObject
                         carGameO.SetActive(true);
+                        // Agregarlo al diccionario que mapea id a GameObject
                         carsDict.Add(kvp.Key,carGameO);
-                        // for(int c = 0; c < newCars; c++)f
-                        // {
-                        // //GameObject carGameO = Instantiate(carsPrefabs[1]);
-                        // GameObject carGameO = Instantiate(carsPrefabs[UnityEngine.Random.Range(0, carsPrefabs.Length)]);
-                        // carGameO.SetActive(true);
-                        // cars.Add(carGameO);
-                        // }
                     }
                 }
-            
-
-        //         List<Vector3> poss = new List<Vector3>();
-        //         //for (int s = 0; s < cars.Count; s++)
-        //         for (int s = 0; s < newPositions.Count; s++)
-        //         {
-        //             poss.Add(newPositions[s]);
-        //         }
-        //         positions.Add(poss);
-        //         orientations.Add(orientationCars);
             }
         }
-    
-        // if (positions.Count > 0){
-        //     Debug.Log(positions[positions.Count - 1].Count);
-        // }
-
     }
-
-    // Start is called before the first frame update
+    
+    /*
+     *  Incicializacion de diccionarios a utlizar
+     *  Se llama a las posiciones por primera vez con una posicion falsa
+     *  Se manda a llamar la funcion SendData() para actualizar las posiciones
+     *  Solo se corre una vez        
+     */
     void Start()
     {
-        // positions = new List<List<Vector3>>();
-        // orientations = new List<List<String>>();
+        // Lista de semaforos
         trafficLights = new List<String>()
         {
             "t",
@@ -209,50 +220,62 @@ public class WebClient : MonoBehaviour
             "s",
             "t"
         };
+        // Diccionario de posiciones [carID: Posicion]
         positionsDict = new Dictionary<int, Vector3>();
+        // Diccionario de posiciones previas para interpolacion [carID: Posicion Previa]
         prevPositionsDict = new Dictionary<int, Vector3>();
+        // Diccionario de orientaciones de los autos [carID: Orientacion]
         orientationsDict = new Dictionary<int, string>();
+        // Diccionario de destinos de los autos [carID: Destino]
         destinationsDict = new Dictionary<int, List<int>>();
+        // Diccionario de GameObjects de los autos [carID: GameObject]
         carsDict = new Dictionary<int, GameObject>();
-
-
 
 #if UNITY_EDITOR
         Vector3 fakePos = new Vector3(3.44f, 0, -15.707f);
         string json = EditorJsonUtility.ToJson(fakePos);
-        //StartCoroutine(SendData(call));
+        // Iniciar co-rutina para consumir la ruta que reinicia la simulacion
         StartCoroutine(RestartSimulation(json));
+        // Iniciar co-rutina para solicitar los valores iniciales de la simulacion
         StartCoroutine(SendData(json));
         timer = timeToUpdate;
 #endif
     }
 
 
-
-
-    // Update is called once per frame
+    /*
+     * Funcion que se actualiza con cada frame
+     * Se actualiza el timer para volver a llamar las posiciones al servidor
+     * Se actualizan todas las posiciones de todos los coches y si es que necesitan ser borrados
+     */
     void Update()
     {
         Vector3 dir;
         Vector3 dir2;
-        //timer -= Time.deltaTime;
+        // Velocidad con la que se realizan actualizaciones a la simulacion
         timer -= simVel;
         dt = 1.0f - (timer / timeToUpdate);
 
+        // Si el timer es menor a 0
         if(timer < 0)
         {
-
-
+            
 #if UNITY_EDITOR
-            timer = timeToUpdate; // reset the timer
+            // Reiniciar el temporizador
+            timer = timeToUpdate;
+            
             Vector3 fakePos = new Vector3(3.44f, 0, -15.707f);
+
+            // Si es necesario, se borran los automoviles que ya llegaron a su destino 
             foreach(KeyValuePair<int,Vector3> kvp in prevPositionsDict)
             {
                 if(!positionsDict.ContainsKey(kvp.Key))
                 {
                     if (carsDict.ContainsKey(kvp.Key))
                     {
+                        // Destruir GameObject
                         Destroy(carsDict[kvp.Key]);
+                        // Eliminar auto de los mapas
                         orientationsDict.Remove(kvp.Key);
                         destinationsDict.Remove(kvp.Key);
                         carsDict.Remove(kvp.Key);
@@ -260,61 +283,65 @@ public class WebClient : MonoBehaviour
 
                 }
             }
+
+            // Se vuelve a pedir posiciones al servidor
             string json = EditorJsonUtility.ToJson(fakePos);
             StartCoroutine(SendData(json));
 #endif
+            // Actualizacion de rotacion de cada automovil
             foreach(KeyValuePair<int, string> kvp in orientationsDict)
-            {   //Vector3 dir; 
+            { 
+                // Si el automovil va hacia arriba
                 if (orientationsDict[kvp.Key] == "Arriba")
                 {
                     dir = new Vector3(0, 0, 2);
                 }
+                // Si el automovil va hacia derecha
                 else if (orientationsDict[kvp.Key] == "Derecha")
                 {
                     dir = new Vector3(2, 0, 0);
                 }
+                // Si el automovil va hacia izquierda
                 else if (orientationsDict[kvp.Key] == "Izquierda")
                 {
                     dir = new Vector3(-2, 0, 0);
                 }
+                // Si el automovil va hacia abajo
                 else
                 {
                     dir = new Vector3(0, 0, -2);
                 }
+                // Realizar la rotacion
                 carsDict[kvp.Key].transform.rotation = Quaternion.LookRotation(dir);
             }
 
-            // Actualizacion de flecha
+            // Actualizacion de rotacion de cada flecha
             foreach(KeyValuePair<int, GameObject> kvp in carsDict)
             {
+                // Encontrar las coordenadas del destino
                 List<int> destiny = destinationsDict[kvp.Key];
-                //Vector3 destinyv = new Vector3(destiny[0], carsDict[kvp.Key].transform.position.y, destiny[1]);
+                
+                // Crear un vector con los puntos del destino
                 Vector3 destinyv = new Vector3(destiny[0], 0, destiny[1]);
-                Debug.Log("Destino:" + destinyv);
+
+                // Encontrar el vector de la posicion de la flecha
                 Vector3 arrow = carsDict[kvp.Key].transform.Find("Arrow2").transform.position;
-                carsDict[kvp.Key].transform.Find("Arrow2").gameObject.transform.GetChild(0).gameObject.GetComponent<Renderer>().material = arrowMaterials[UnityEngine.Random.Range(0, arrowMaterials.Length)];
+                
+                // Cambiar el material de la flecha
+                //carsDict[kvp.Key].transform.Find("Arrow2").gameObject.transform.GetChild(0).gameObject.GetComponent<Renderer>().material = arrowMaterials[UnityEngine.Random.Range(0, arrowMaterials.Length)];
+                
+                // Calcular el vector que representa la nueva posicion a donde debe apuntar la flecha
                 Vector3 origin = new Vector3(arrow.x, arrow.y, arrow.z);
-                Debug.Log("Origin: " + origin);
                 dir2 = destinyv - origin;
-                Debug.Log("Quaternion: " + dir2);
+                
+                // Realizar la rotacion
                 carsDict[kvp.Key].transform.Find("Arrow2").transform.rotation = Quaternion.LookRotation(dir2);
             }
         } 
+        
 
-        /*
-        // Crear autos y agregarlos al vector de carss
-            // Guardar siempre el len(cars) después de cada update y sacar el len al inicio
-            // La diferencia es el número de autos que hay que agregar al vector s
-        int newCars = positions[positions.Count-1].Count - 4 - prevLen;
-        prevLen = newCars;
-
-        for(int c = 0; c < newCars; c++){
-            GameObject carGameO = Instantiate(carsPrefabs[1]);
-            cars.Add(carGameO);
-        }*/
-
-        //  public List<String> trafficLights;
-        // Actualizar colores de los semáforos
+        // Actualizar colores de los semaforos. Cada semaforo tiene GameObjects con los 3 colores
+        // los cuales se desactivan segun sea el caso
         for (int tl = 0; tl < 4; tl++) 
         {
             if (trafficLights[tl] == "Verde")
@@ -341,7 +368,7 @@ public class WebClient : MonoBehaviour
 
         if(positionsDict.Count > 0)
         {
-            // Se itera en el diccionario actual para actualizar las posiciones de los automóviles
+            // Se itera en el diccionario actual para actualizar las posiciones de los automoviles
             foreach(KeyValuePair<int, Vector3> kvp in positionsDict)
             {
                 // Revisar si la llave se encuentra en el diccionario previous, entonces se puede interpolar
@@ -350,26 +377,31 @@ public class WebClient : MonoBehaviour
                     Vector3 interpolated = Vector3.Lerp(prevPositionsDict[kvp.Key], positionsDict[kvp.Key], dt);
                     carsDict[kvp.Key].transform.localPosition = new Vector3(interpolated.x, carsDict[kvp.Key].transform.position.y ,interpolated.z);
                 } 
-                // Si no se encuentra, entonces solo se coloca el automóvil en la coordenada correcta
+                // Si no se encuentra, entonces solo se coloca el automovil en la coordenada correcta
                 else
                 {
                     carsDict[kvp.Key].transform.localPosition = new Vector3(positionsDict[kvp.Key].x,carsDict[kvp.Key].transform.position.y, positionsDict[kvp.Key].z);
+                    // Si el automovil va hacia arriba
                     if (orientationsDict[kvp.Key] == "Arriba")
                     {
                         dir = new Vector3(0, 0, 2);
                     }
+                    // Si el automovil va hacia derecha
                     else if (orientationsDict[kvp.Key] == "Derecha")
                     {
                         dir = new Vector3(2, 0, 0);
                     }
+                    // Si el automovil va hacia izquierda
                     else if (orientationsDict[kvp.Key] == "Izquierda")
                     {
                         dir = new Vector3(-2, 0, 0);
                     }
+                    // Si el automovil va hacia abajo
                     else
                     {
                         dir = new Vector3(0, 0, -2);
                     }
+                    // Actualizacion de direccon
                     carsDict[kvp.Key].transform.rotation = Quaternion.LookRotation(dir);
                 }
             }
@@ -377,24 +409,28 @@ public class WebClient : MonoBehaviour
             // Actualizacion de flecha
             foreach(KeyValuePair<int, GameObject> kvp in carsDict)
             {
+                // Encontrar las coordenadas del destino
                 List<int> destiny = destinationsDict[kvp.Key];
-                //Vector3 destinyv = new Vector3(destiny[0], carsDict[kvp.Key].transform.position.y, destiny[1]);
+                
+                // Crear un vector con los puntos del destino
                 Vector3 destinyv = new Vector3(destiny[0], 0, destiny[1]);
-                Debug.Log("Destino:" + destinyv);
+                
+                // Encontrar el vector de la posicion de la flecha
                 Vector3 arrow = carsDict[kvp.Key].transform.Find("Arrow2").transform.position;
+                
+                // Calcular el vector que representa la nueva posicion a donde debe apuntar la flecha
                 Vector3 origin = new Vector3(arrow.x, arrow.y, arrow.z);
-                Debug.Log("Origin: " + origin);
                 dir2 = destinyv - origin;
-                Debug.Log("Quaternion: " + dir2);
+                
+                // Realizar la rotacion
                 carsDict[kvp.Key].transform.Find("Arrow2").transform.rotation = Quaternion.LookRotation(dir2);
             }
 
-            // Se itera para eliminar los automóviles que salen
+            // Se itera para desactivar los automoviles que llegan a su destino. Cuando se piden nuevas posiciones se destruye el objecto
             foreach(KeyValuePair<int,Vector3> kvp in prevPositionsDict)
             {
                 if(!positionsDict.ContainsKey(kvp.Key))
                 {
-                    //Destroy(carsDict[kvp.Key]);
                     if (carsDict.ContainsKey(kvp.Key))
                     {
                         if (carsDict[kvp.Key].activeInHierarchy)
@@ -404,7 +440,6 @@ public class WebClient : MonoBehaviour
                     }
                 }
             }
-            
         }
     }
 }
