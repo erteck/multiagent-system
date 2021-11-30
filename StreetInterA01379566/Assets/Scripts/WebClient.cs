@@ -35,6 +35,7 @@ public class CarJSON
     public int destinationx;
     public int destinationy;
 
+    
     public static CarJSON CreateFromJSON(string jsonString)
     {
         return JsonUtility.FromJson<CarJSON>(jsonString);
@@ -57,7 +58,7 @@ public class WebClient : MonoBehaviour
 
     public List<GameObject> tls;
    
-
+    public float simVel = 1;
     public List<String> trafficLights;
 
     public GameObject[] carsPrefabs;
@@ -74,8 +75,11 @@ public class WebClient : MonoBehaviour
 
     IEnumerator RestartSimulation(string data)
     {
+         WWWForm form = new WWWForm();
         string urlRestart = "localhost:8000/restart";
-        using (UnityWebRequest www = UnityWebRequest.Get(urlRestart))
+        //string urlRestart = "https://multiagentsystemteam2.mybluemix.net/restart";
+        using (UnityWebRequest www = UnityWebRequest.Post(urlRestart, form))
+        //using (UnityWebRequest www = UnityWebRequest.Get(urlRestart))
         {
             byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(data);
             www.uploadHandler = (UploadHandler)new UploadHandlerRaw(bodyRaw);
@@ -96,9 +100,11 @@ public class WebClient : MonoBehaviour
     {
         WWWForm form = new WWWForm();
         //string url = "https://multiagentsystemteam2.mybluemix.net/simulation";
+        //https://multiagentsystemteam2.mybluemix.net/simulation
         string url = "localhost:8000/simulation";
-        //using (UnityWebRequest www = UnityWebRequest.Post(url, form))
-        using (UnityWebRequest www = UnityWebRequest.Get(url))
+        //string url = "https://multiagentsystemteam2.mybluemix.net/simulation";
+        using (UnityWebRequest www = UnityWebRequest.Post(url, form))
+        //using (UnityWebRequest www = UnityWebRequest.Get(url))
         {
             byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(data);
             www.uploadHandler = (UploadHandler)new UploadHandlerRaw(bodyRaw);
@@ -118,7 +124,7 @@ public class WebClient : MonoBehaviour
                 prevPositionsDict = positionsDict;
                 positionsDict = new Dictionary<int, Vector3>();
                 string txt = www.downloadHandler.text;
-                Debug.Log(txt);
+                //Debug.Log(txt);
                 txt = txt.Replace('\'', '\"');
                 txt = txt.TrimStart('[');
                 txt = txt.TrimEnd(']');
@@ -142,8 +148,8 @@ public class WebClient : MonoBehaviour
                         positionsDict[rumrun.id] = position;
                         orientationsDict[rumrun.id] = rumrun.orientation;
                         List<int> dest = new List<int>();
-                        dest.Add(rumrun.destinationx);
-                        dest.Add(rumrun.destinationy);
+                        dest.Add(rumrun.destinationx* 2 + 1);
+                        dest.Add(rumrun.destinationy * 2 + 1);
                         destinationsDict[rumrun.id] = dest;
                         //Debug.Log(destinationsDict[rumrun.id][0] + " "+ destinationsDict[rumrun.id][1]);
                         // newPositions.Add(position);
@@ -227,8 +233,9 @@ public class WebClient : MonoBehaviour
     void Update()
     {
         Vector3 dir;
+        Vector3 dir2;
         //timer -= Time.deltaTime;
-        timer -= 2;
+        timer -= simVel;
         dt = 1.0f - (timer / timeToUpdate);
 
         if(timer < 0)
@@ -276,6 +283,16 @@ public class WebClient : MonoBehaviour
                 carsDict[kvp.Key].transform.rotation = Quaternion.LookRotation(dir);
             }
 
+            // Actualizacion de flecha
+            foreach(KeyValuePair<int, GameObject> kvp in carsDict)
+            {
+                List<int> destiny = destinationsDict[kvp.Key];
+                Vector3 destinyv = new Vector3(destiny[0], 2, destiny[1]);
+                Vector3 arrow = carsDict[kvp.Key].transform.Find("Arrow2").transform.position;
+                Vector3 origin = new Vector3(arrow.x, arrow.y, arrow.z);
+                dir2 = destinyv - origin;
+                carsDict[kvp.Key].transform.Find("Arrow2").transform.rotation = Quaternion.LookRotation(dir2);
+            }
         } 
 
         /*
@@ -350,7 +367,19 @@ public class WebClient : MonoBehaviour
                     carsDict[kvp.Key].transform.rotation = Quaternion.LookRotation(dir);
                 }
             }
-            // Se itera para eliminar los automóviles que salens
+
+            // Actualizacion de flecha
+            foreach(KeyValuePair<int, GameObject> kvp in carsDict)
+            {
+                List<int> destiny = destinationsDict[kvp.Key];
+                Vector3 destinyv = new Vector3(destiny[0], 2, destiny[1]);
+                Vector3 arrow = carsDict[kvp.Key].transform.Find("Arrow2").transform.position;
+                Vector3 origin = new Vector3(arrow.x, arrow.y, arrow.z);
+                dir2 = destinyv - origin;
+                carsDict[kvp.Key].transform.Find("Arrow2").transform.rotation = Quaternion.LookRotation(dir2);
+            }
+
+            // Se itera para eliminar los automóviles que salen
             foreach(KeyValuePair<int,Vector3> kvp in prevPositionsDict)
             {
                 if(!positionsDict.ContainsKey(kvp.Key))
