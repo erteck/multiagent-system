@@ -19,7 +19,8 @@ class AgentCar(Agent):
     # Escoger de manera aleatoria un destino para el auto, exluyendo aquel que
     # Involucra una vuelta en U    
     def setDestination(self, model):
-        exclude = {(11,0):(10,0),(21,10):(21,11),(11,21):(10,21),(0,10):(0,11)}
+        exclude = {(11,0):(10,0),(21,11):(21,10),(10,21):(11,21),(0,10):(0,11)}
+        #exclude = {(11,0):(10,0),(21,11):(21,10),(11,21):(10,21),(0,10):(0,11)}
         d = self.random.choice(model.possibleDestinations)
         while exclude.get(self.origin) == d:
              d = self.random.choice(model.possibleDestinations)

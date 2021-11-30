@@ -52,6 +52,7 @@ public class WebClient : MonoBehaviour
     Dictionary<int, string> orientationsDict;
     Dictionary<int, List<int>> destinationsDict;
 
+    public Material[] arrowMaterials;
 
     public List<GameObject> cars;
     //public List<GameObject>
@@ -287,10 +288,15 @@ public class WebClient : MonoBehaviour
             foreach(KeyValuePair<int, GameObject> kvp in carsDict)
             {
                 List<int> destiny = destinationsDict[kvp.Key];
-                Vector3 destinyv = new Vector3(destiny[0], 2, destiny[1]);
+                //Vector3 destinyv = new Vector3(destiny[0], carsDict[kvp.Key].transform.position.y, destiny[1]);
+                Vector3 destinyv = new Vector3(destiny[0], 0, destiny[1]);
+                Debug.Log("Destino:" + destinyv);
                 Vector3 arrow = carsDict[kvp.Key].transform.Find("Arrow2").transform.position;
+                carsDict[kvp.Key].transform.Find("Arrow2").gameObject.transform.GetChild(0).gameObject.GetComponent<Renderer>().material = arrowMaterials[UnityEngine.Random.Range(0, arrowMaterials.Length)];
                 Vector3 origin = new Vector3(arrow.x, arrow.y, arrow.z);
+                Debug.Log("Origin: " + origin);
                 dir2 = destinyv - origin;
+                Debug.Log("Quaternion: " + dir2);
                 carsDict[kvp.Key].transform.Find("Arrow2").transform.rotation = Quaternion.LookRotation(dir2);
             }
         } 
@@ -372,10 +378,14 @@ public class WebClient : MonoBehaviour
             foreach(KeyValuePair<int, GameObject> kvp in carsDict)
             {
                 List<int> destiny = destinationsDict[kvp.Key];
-                Vector3 destinyv = new Vector3(destiny[0], 2, destiny[1]);
+                //Vector3 destinyv = new Vector3(destiny[0], carsDict[kvp.Key].transform.position.y, destiny[1]);
+                Vector3 destinyv = new Vector3(destiny[0], 0, destiny[1]);
+                Debug.Log("Destino:" + destinyv);
                 Vector3 arrow = carsDict[kvp.Key].transform.Find("Arrow2").transform.position;
                 Vector3 origin = new Vector3(arrow.x, arrow.y, arrow.z);
+                Debug.Log("Origin: " + origin);
                 dir2 = destinyv - origin;
+                Debug.Log("Quaternion: " + dir2);
                 carsDict[kvp.Key].transform.Find("Arrow2").transform.rotation = Quaternion.LookRotation(dir2);
             }
 
@@ -396,39 +406,5 @@ public class WebClient : MonoBehaviour
             }
             
         }
-
-
-        // // Actualizar posiciones de los autos
-        // if (positions.Count > 1)
-        // {
-        //     // Actualiza las direcciones
-        //     for (int s = 0; s < cars.Count; s++)
-        //     {
-        //         // longitud de positions[-1]
-        //         // Positions [-2]
-        //         // Get the last position for s
-
-        //         if ( s <  positions[positions.Count - 2].Count)
-        //         {
-        //             List<Vector3> last = positions[positions.Count - 1];
-        //             // Get the previous to last position for s
-        //             List<Vector3> prevLast = positions[positions.Count - 2];
-        //             // Interpolate using dt
-        //             Vector3 interpolated = Vector3.Lerp(prevLast[s], last[s], dt);
-        //             cars[s].transform.localPosition = new Vector3(interpolated.x,cars[s].transform.position.y,interpolated.z);
-        //             Vector3 dir = last[s] - prevLast[s];
-        //             cars[s].transform.rotation = Quaternion.LookRotation(dir);
-        //         }
-        //         else
-        //         {
-        //             Vector3 n = positions[positions.Count-1][s];
-        //             cars[s].transform.localPosition = new Vector3(n.x,cars[s].transform.position.y,n.z);
-        //         }
-        //     }
-        // }
-        // if(positions.Count > 3)
-        // {
-        //     positions.RemoveAt(0);
-        // }
     }
 }
