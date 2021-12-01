@@ -93,8 +93,8 @@ public class WebClient : MonoBehaviour
     IEnumerator RestartSimulation(string data)
     {
         WWWForm form = new WWWForm();
-        string urlRestart = "localhost:8000/restart";
-        //string urlRestart = "https://multiagentsystemteam2.mybluemix.net/restart";
+        //string urlRestart = "localhost:8000/restart";
+        string urlRestart = "https://multiagentsystemteam2.mybluemix.net/restart";
         using (UnityWebRequest www = UnityWebRequest.Post(urlRestart, form))
         {
             byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(data);
@@ -120,8 +120,8 @@ public class WebClient : MonoBehaviour
     {
         WWWForm form = new WWWForm();
         // Link a la nube de IBM: https://multiagentsystemteam2.mybluemix.net/simulation
-        string url = "localhost:8000/simulation";
-        //string url = "https://multiagentsystemteam2.mybluemix.net/simulation";
+        //string url = "localhost:8000/simulation";
+        string url = "https://multiagentsystemteam2.mybluemix.net/simulation";
         
         // Hacer request al servidor 
         using (UnityWebRequest www = UnityWebRequest.Post(url, form))
@@ -141,7 +141,6 @@ public class WebClient : MonoBehaviour
             }
             else
             {
-                prevPositionsDict = positionsDict;
                 positionsDict = new Dictionary<int, Vector3>();
                 string txt = www.downloadHandler.text;
                 txt = txt.Replace('\'', '\"');
@@ -286,6 +285,7 @@ public class WebClient : MonoBehaviour
 
             // Se vuelve a pedir posiciones al servidor
             string json = EditorJsonUtility.ToJson(fakePos);
+            prevPositionsDict = positionsDict;
             StartCoroutine(SendData(json));
 #endif
             // Actualizacion de rotacion de cada automovil
