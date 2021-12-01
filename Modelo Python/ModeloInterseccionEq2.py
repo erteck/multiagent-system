@@ -185,40 +185,40 @@ class AgentCar(Agent):
             self.checkMove()
         
         
-        # Arq 1. Si tengo coche adelante, no avanzo (implicito)
+        # Arq (1). Si tengo coche adelante, no avanzo (implicito)
         
-        # Arq 2. Si estoy en una celda de Aviso y mi prev es normal 
+        # Arq (2). Si estoy en una celda de Aviso y mi prev es normal 
         # Comunicarme con semaforo y avisarle que ya llegue
         if(self.previous == "Normal" and self.curr == "Aviso"):
             self.notifyTrafficLight()
             
-        # Arq 3. Si estoy en una celda de semaforo y mi prev es una de aviso
+        # Arq (3). Si estoy en una celda de semaforo y mi prev es una de aviso
         # Detenerse y cambiar la celda actual y previa
         elif(self.previous == "Aviso" and self.curr == "Semaforo"):
             self.previous = self.curr
             self.curr = "Semaforo"
             
             
-        # Arq 4. Si estoy en una celda de aviso, y mi prev es de aviso
+        # Arq (4). Si estoy en una celda de aviso, y mi prev es de aviso
         # El auto se pregunta si su semaforo tiene un turno, si no, le vulve a avisar que se encuentra esperando
         elif(self.previous == "Aviso" and self.curr == "Aviso"):
             if(self.trafficLight.unique_id not in AgentTrafficLight.turns):
                 AgentTrafficLight.turns.append(self.trafficLight.unique_id)
 
         
-        # Arq 5. Si estoy en una celda de semaforo y mi prev es una celda de semaforo
+        # Si estoy en una celda de semaforo y mi prev es una celda de semaforo
         # Checar el color del semaforo (detenerse y moverse)
         elif(self.previous == "Semaforo" and self.curr == "Semaforo"):
             tl = self.findTrafficLight()
-            # Arq 6. Si es verde el semaforo, intento avanzar
+            # Arq (5). Si es verde el semaforo, intento avanzar
             if tl.color == "Verde":
                 self.checkMove()
                 return
-            # Arq 7. Si es rojo, no me muevo
+            # Arq (6). Si es rojo, no me muevo
             elif tl.color == "Rojo":
                 return
 
-        # Arq 8 Si estoy en una celda normal y sali de la celda de interseccion
+        # Arq (7). Si estoy en una celda normal y sali de la celda de interseccion
         # Se le resta al contador de autos del semaforo
         elif(self.curr == "Normal" and self.previous == "Interseccion"):
             self.trafficLight.carCount -= 1
@@ -306,7 +306,7 @@ class AgentTrafficLight(Agent):
             AgentTrafficLight.turns.append(self.unique_id)
             self.timeGreen = 10
 
-        # Arq (3). Si mi tiempo de turno acaba de terminar y mi contador de coches igual 0
+        # Arq (3). Si mi tiempo de turno acaba de terminar y mi contador de coches es igual 0
         # Cambiar a rojo, terminar con mi turno y reiniciar mi contador de luz verde
         elif self.isMyTurn and self.timeGreen == 0 and self.carCount <= 0:
             self.color = "Rojo"
@@ -328,7 +328,7 @@ class AgentTrafficLight(Agent):
         elif not AgentTrafficLight.turns:
             self.color = "Amarillo"
 
-        # Arq (7) Si no es mi turno y en algun otro semaforo hay autos debo permanecer en rojo
+        # Arq (7) Si no es mi turno,  permanecer en rojo
         elif not self.isMyTurn:
             self.color = "Rojo"
         
