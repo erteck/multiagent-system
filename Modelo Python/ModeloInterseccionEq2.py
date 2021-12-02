@@ -222,6 +222,7 @@ class AgentCar(Agent):
         # Se le resta al contador de autos del semaforo
         elif(self.curr == "Normal" and self.previous == "Interseccion"):
             self.trafficLight.carCount -= 1
+            self.model.trafficFlow += 1
 
   
 # Agente Celda en el Grid
@@ -336,7 +337,7 @@ class AgentTrafficLight(Agent):
     def step(self):
         '''
         Step de semaforo, implementado en metodo stepTrafficLight para poder actualizar
-        a todos los semaforos después de los autos, evitando el orden de MESA.
+        a todos los semaforos despues de los autos, evitando el orden de MESA.
         '''
         pass
         
@@ -363,6 +364,9 @@ class ModelStreet(Model):
         self.possibleDestinations = [(10,0),(21,10),(11,21),(0,11)]
         self.schedule = RandomActivation(self)
         self.running = True
+        
+        # Contador para conocer el flujo vial en un intervalo de tiempo
+        self.trafficFlow = 0
         
         # Semaforos
         self.tl1 = None
@@ -595,6 +599,6 @@ class ModelStreet(Model):
         # Se arman los arreglos de posiciones para mandar al servidor
         for pos in range(100,len(self.schedule.agents)):
             xy = self.schedule.agents[pos].pos
-            p = [xy[0],xy[1],0, self.schedule.agents[pos].orientation, self.schedule.agents[pos].unique_id, self.schedule.agents[pos].destination]
+            p = [xy[0],xy[1],0, self.schedule.agents[pos].orientation, self.schedule.agents[pos].unique_id, self.schedule.agents[pos].destination, self.trafficFlow]
             positions.append(p)
         return positions

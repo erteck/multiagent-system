@@ -46,6 +46,7 @@ public class CarJSON
     public int id;
     public int destinationx;
     public int destinationy;
+    public int trafficFlow;
 
     public static CarJSON CreateFromJSON(string jsonString)
     {
@@ -74,8 +75,19 @@ public class WebClient : MonoBehaviour
     Dictionary<int, string> orientationsDict;
     // Diccionario en el que se asocia el id del automovil con las coordenadas de su destino
     Dictionary<int, List<int>> destinationsDict;
+    // Variable de tipo entero que permite conocer la tasa de flujo de automoviles en un determinado tiempo
+    int trafficFlow;
+    // Variable publica de tipo float que permite al usuario especificar el tiempo en el que desea
+    // conocer la tasa de flujo de automoviles
+    public int trafficFlowSeconds;
 
-    //public Material[] arrowMaterials;
+    // Variable que permitira convertir a float el tiempo proporcionado por el usuario (necesario para realizar la cuenta
+    // regresiva del tiempo)
+    float timeRemaining;
+
+    // Permite conocer si el timer sigue en curso para evitar que se despliegue la tasa de flujo mas de una vez
+    bool timerIsRunning = false;
+    
     public String enlaceSimulacion;
     public String enlaceRestart;
     public List<GameObject> tls;
@@ -85,7 +97,6 @@ public class WebClient : MonoBehaviour
     public float timeToUpdate = 1f;
     private float timer;
     public float dt;
-
 
     /*
      * Funcion que solicita que al servidor reinicie la simulacion
@@ -185,6 +196,9 @@ public class WebClient : MonoBehaviour
                         dest.Add(rumrun.destinationx* 2 + 1);
                         dest.Add(rumrun.destinationy * 2 + 1);
                         destinationsDict[rumrun.id] = dest;
+
+                        // Extraer el valor actualizado de la tasa de flujo
+                        trafficFlow = rumrun.trafficFlow;
                     }
                 }
                 
@@ -214,6 +228,11 @@ public class WebClient : MonoBehaviour
      */
     void Start()
     {
+        // Convertir a float la cantidad de segundos (solo por ser mas amigable para el usuario)
+        timeRemaining = (float)trafficFlowSeconds;
+
+        // Comenzar el timer
+        timerIsRunning = true;
         // Lista de semaforos
         trafficLights = new List<String>()
         {
@@ -257,6 +276,23 @@ public class WebClient : MonoBehaviour
         // Velocidad con la que se realizan actualizaciones a la simulacion
         timer -= simVel;
         dt = 1.0f - (timer / timeToUpdate);
+
+        // Cuando el tiempo de ejecucion es mayor al tiempo especificado por el usuario,
+        // Se muestra en consola la tasa de flujo de automoviles en ese determinado tiempo
+        if(timerIsRunning)
+        {
+            if (timeRemaining > 0.0f)
+            {
+                timeRemaining -= Time.deltaTime;
+            }
+            else
+            {
+                timeRemaining = 0;
+                timerIsRunning = false;
+                Debug.Log("Tasa de flujo: " + trafficFlow + " automóviles en " + trafficFlowSeconds + " segundos");
+            }
+
+        }
 
         // Si el timer es menor a 0
         if(timer < 0)
@@ -329,10 +365,7 @@ public class WebClient : MonoBehaviour
 
                 // Encontrar el vector de la posicion de la flecha
                 Vector3 arrow = carsDict[kvp.Key].transform.Find("Arrow2").transform.position;
-                
-                // Cambiar el material de la flecha
-                //carsDict[kvp.Key].transform.Find("Arrow2").gameObject.transform.GetChild(0).gameObject.GetComponent<Renderer>().material = arrowMaterials[UnityEngine.Random.Range(0, arrowMaterials.Length)];
-                
+
                 // Calcular el vector que representa la nueva posicion a donde debe apuntar la flecha
                 Vector3 origin = new Vector3(arrow.x, arrow.y, arrow.z);
                 dir2 = destinyv - origin;
