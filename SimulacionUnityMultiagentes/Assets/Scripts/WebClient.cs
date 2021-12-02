@@ -76,6 +76,8 @@ public class WebClient : MonoBehaviour
     Dictionary<int, List<int>> destinationsDict;
 
     //public Material[] arrowMaterials;
+    public String enlaceSimulacion;
+    public String enlaceRestart;
     public List<GameObject> tls;
     public float simVel = 1;
     public List<String> trafficLights;
@@ -94,7 +96,8 @@ public class WebClient : MonoBehaviour
     {
         WWWForm form = new WWWForm();
         //string urlRestart = "localhost:8000/restart";
-        string urlRestart = "https://multiagentsystemteam2.mybluemix.net/restart";
+        //string urlRestart = "https://multiagentsystemteam2.mybluemix.net/restart";
+        string urlRestart = enlaceRestart;
         using (UnityWebRequest www = UnityWebRequest.Post(urlRestart, form))
         {
             byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(data);
@@ -121,8 +124,8 @@ public class WebClient : MonoBehaviour
         WWWForm form = new WWWForm();
         // Link a la nube de IBM: https://multiagentsystemteam2.mybluemix.net/simulation
         //string url = "localhost:8000/simulation";
-        string url = "https://multiagentsystemteam2.mybluemix.net/simulation";
-        
+        //string url = "https://multiagentsystemteam2.mybluemix.net/simulation";
+        string url = enlaceSimulacion;
         // Hacer request al servidor 
         using (UnityWebRequest www = UnityWebRequest.Post(url, form))
         {
